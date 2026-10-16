@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sift.sarvesh.si/sitemap.xml

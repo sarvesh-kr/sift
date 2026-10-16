@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#18392d">
+  <title>Sift — Your space, simplified.</title>
+  <meta name="description" content="Make sense of your storage. Sift helps you see large files, find exact duplicates, and review cleanup on your terms. Free, open-source downloads for Windows, macOS, and Linux.">
+  <link rel="canonical" href="https://sift.sarvesh.si/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sift.sarvesh.si/">
+  <meta property="og:title" content="Sift — Your space, simplified.">
+  <meta property="og:description" content="A little clarity. A lot more room. Meet a calmer way to understand and clean up your storage.">
+  <meta property="og:image" content="https://sift.sarvesh.si/assets/social.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Sift. A little clarity. A lot more room.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://sift.sarvesh.si/assets/social.png">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="preload" href="assets/fonts/manrope-600.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="site.js" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Sift","url":"https://sift.sarvesh.si/","description":"A desktop storage analyzer and cleanup assistant with local scanning, exact duplicate detection, and reviewed cleanup through system trash.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"{{VERSION}}","license":"https://github.com/sarvesh-kr/sift/blob/main/LICENSE","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon-library" aria-hidden="true">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9S4 17 4 12V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 8V5h7l2 3h9v12H3V8Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.1 10.5 4v7.3H3Zm9-1.4L22 2v9.3h-9.5ZM3 12.7h7.5V20L3 18.9Zm9.5 0H22V22l-9.5-1.7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-apple" viewBox="0 0 24 24"><path d="M16.8 12.8c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.9-3.5.9-.8 0-1.9-.9-3.1-.8-1.6 0-3 1-3.8 2.4-1.6 2.8-.4 7 1.1 9.3.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 3-.7s1.8.7 3.1.7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.3-.9-2.3-3.8ZM14.6 6c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.8 1 .1 2.1-.5 2.8-1.2Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-linux" viewBox="0 0 24 24"><path d="M8 10V7a4 4 0 0 1 8 0v3l3 7c1 3-2 4-4 3l-3-1-3 1c-2 1-5 0-4-3l3-7Z"/><path d="m10 10 2 2 2-2M9 16l-2 4m8-4 2 4"/><path d="M10 7h.01M14 7h.01" stroke-width="2.5"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-4 1.2-4-2-6-2m12 5v-3.9c0-1 .1-1.5-.5-2.1 3.3-.4 6.5-1.6 6.5-7a5.5 5.5 0 0 0-1.5-3.8A5 5 0 0 0 19.4 1S18.2.6 15 2.5a13.4 13.4 0 0 0-6 0C5.8.6 4.6 1 4.6 1a5 5 0 0 0-.1 4.2A5.5 5.5 0 0 0 3 9c0 5.4 3.2 6.6 6.5 7-.6.6-.6 1.3-.5 2.1V22"/></symbol>
+  </svg>
+
+  <header class="header">
+    <div class="nav-wrap shell">
+      <a href="#" class="brand" aria-label="Sift home"><img src="assets/icon.svg" width="38" height="38" alt=""><span>sift<span class="brand-dot">.</span></span></a>
+      <nav aria-label="Main navigation" class="nav-links"><a href="#inside">Meet Sift</a><a href="#how-it-works">How it works</a><a href="https://github.com/sarvesh-kr/sift" class="source-link">GitHub <svg class="icon"><use href="#i-arrow"/></svg></a></nav>
+      <a href="#download" class="button button-small">Get Sift <svg class="icon"><use href="#i-download"/></svg></a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <a href="{{RELEASE_URL}}" class="release-pill"><span class="status-dot"></span><span>{{VERSION}} · {{RELEASE_LABEL}}</span><span class="pill-divider"></span>See what’s new <svg class="icon"><use href="#i-arrow"/></svg></a>
+      <h1 id="hero-title">A little clarity.<br><span>A lot more room.</span></h1>
+      <p class="hero-copy">Meet a calmer way to understand your storage.<br class="desktop-break"> Find what’s taking up space. Make room for what matters.</p>
+      <div class="hero-actions"><a href="#download" class="button button-primary">Download Sift <svg class="icon"><use href="#i-download"/></svg></a><a href="#inside" class="text-link">Take a closer look <svg class="icon"><use href="#i-arrow"/></svg></a></div>
+      <p class="hero-note">Free & open source <span>·</span> Windows, macOS & Linux</p>
+
+      <div class="product-stage">
+        <div class="stage-topline"><span><span class="status-dot"></span> YOUR SPACE, SIMPLIFIED</span><span>MADE FOR A LITTLE PEACE OF MIND</span></div>
+        <div class="app-window">
+          <div class="window-chrome"><span class="window-dots"><i></i><i></i><i></i></span><span>Sift — Your workspace</span><svg class="icon"><use href="#i-shield"/></svg></div>
+          <div class="hero-screenshot"><img src="assets/overview.png" width="1440" height="1766" fetchpriority="high" alt="Sift’s desktop overview showing file categories, exact duplicates, and a proportional storage map using sample data."></div>
+        </div>
+        <p class="stage-caption"><svg class="icon"><use href="#i-shield"/></svg> Your files stay on your device. Your decisions stay yours.<span>Sample workspace shown</span></p>
+      </div>
+    </section>
+
+    <div class="principles shell" aria-label="Sift principles"><p><svg class="icon"><use href="#i-shield"/></svg>Local by design</p><span></span><p><svg class="icon"><use href="#i-check"/></svg>Always review before removal</p><span></span><p><svg class="icon"><use href="#i-folder"/></svg>Built for your desktop</p></div>
+
+    <section id="inside" class="inside section shell" aria-labelledby="inside-title">
+      <div class="section-heading"><div><p class="eyebrow">LESS GUESSWORK. MORE CLARITY.</p><h2 id="inside-title">See your space.<br>Find your breathing room.</h2></div><p>From the big picture to the forgotten download,<br class="desktop-break"> every file has a place. Now you can see it.</p></div>
+      <div class="preview-tabs" role="tablist" aria-label="Explore Sift features">
+        <button id="tab-overview" role="tab" aria-selected="true" aria-controls="preview-panel" data-preview="overview">01 <span>The bigger picture</span></button>
+        <button id="tab-cleanup" role="tab" aria-selected="false" aria-controls="preview-panel" tabindex="-1" data-preview="cleanup">02 <span>A smarter starting point</span></button>
+        <button id="tab-duplicates" role="tab" aria-selected="false" aria-controls="preview-panel" tabindex="-1" data-preview="duplicates">03 <span>A little less double</span></button>
+      </div>
+      <div id="preview-panel" class="preview-panel" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+        <div class="preview-description"><span class="preview-icon"><svg class="icon"><use id="preview-symbol" href="#i-folder"/></svg></span><h3 id="preview-title">Everything in perspective.</h3><p id="preview-copy">A visual map turns a long list of files into something that makes sense. Explore by category, follow a folder, or put your biggest files first.</p><span class="sample-label">ACTUAL APP · SAMPLE DATA</span></div>
+        <div class="preview-image-wrap"><img id="preview-image" src="assets/overview.png" width="1440" height="1766" loading="lazy" alt="Sift storage overview with a category chart and proportional file map."></div>
+      </div>
+      <noscript><p class="noscript-note">Explore <a href="assets/cleanup.png">Cleanup Center</a> and <a href="assets/duplicates.png">Duplicate Review</a> screenshots.</p></noscript>
+    </section>
+
+    <section class="care-section" aria-labelledby="care-title">
+      <div class="shell care-grid">
+        <div class="care-art" aria-label="Illustration: keep an original file and review an extra copy">
+          <div class="care-art-top"><svg class="icon"><use href="#i-copy"/></svg><span>SAME FILE. A FRESH PERSPECTIVE.</span></div>
+          <div class="file-example keep"><div class="file-symbol"><svg class="icon"><use href="#i-folder"/></svg></div><div><strong>Summer memories.zip</strong><span>Photos / Originals</span></div><span class="file-badge"><svg class="icon"><use href="#i-check"/></svg> Keep</span></div>
+          <div class="file-connector"><span></span>Identical contents, verified<span></span></div>
+          <div class="file-example extra"><div class="file-symbol"><svg class="icon"><use href="#i-copy"/></svg></div><div><strong>Summer memories (copy).zip</strong><span>Downloads / Archives</span></div><span class="file-badge">Review</span></div>
+          <p>Illustrative example · You choose the copy to keep</p>
+        </div>
+        <div class="care-copy"><p class="eyebrow">THOUGHTFULLY BUILT. CAREFULLY CLEARED.</p><h2 id="care-title">A cleaner drive.<br>A clear conscience.</h2><p>Your files are more than bytes. Sift gives you the context to decide what goes, and the control to keep what matters.</p><ul class="care-points"><li><svg class="icon"><use href="#i-check"/></svg><div><strong>Identical means identical.</strong><span>Duplicate matches pass full-content hashing and a separate byte comparison.</span></div></li><li><svg class="icon"><use href="#i-check"/></svg><div><strong>The final say is always yours.</strong><span>Choose files, review the list, then move them to your system’s trash.</span></div></li><li><svg class="icon"><use href="#i-check"/></svg><div><strong>A copy worth keeping.</strong><span>Duplicate cleanup checks that an unchanged, identical copy remains.</span></div></li></ul></div>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="section shell how-section" aria-labelledby="how-title"><div class="section-heading"><div><p class="eyebrow">A FRESH START, IN THREE STEPS.</p><h2 id="how-title">Less clutter.<br>On your terms.</h2></div><p>No account. No file uploads.<br>Just you, your files, and a little clarity.</p></div><ol class="steps"><li><span class="step-number">01</span><h3>Pick your space.</h3><p>Choose a folder or accessible drive. Sift scans in the background while your files stay on your computer.</p></li><li><span class="step-number">02</span><h3>Follow your curiosity.</h3><p>Explore categories, spot large files, and compare exact duplicates. Understand the why behind each cleanup suggestion.</p></li><li><span class="step-number">03</span><h3>Make a little room.</h3><p>Review your selection and send it to system trash. Need a file back? Restore it from your operating system’s trash.</p></li></ol></section>
+
+    <section id="download" class="download-section" aria-labelledby="download-title">
+      <div class="shell"><div class="download-heading"><p class="eyebrow">A LITTLE LESS CLUTTER STARTS HERE.</p><h2 id="download-title">Make room for<br><span>what’s next.</span></h2><p>Your next fresh start is a download away.<br>Free, open source, and made for your desktop.</p><span class="download-version"><span class="status-dot"></span>{{VERSION}} · {{RELEASE_LABEL}}</span></div>
+        <div class="downloads">
+          <article class="download-card" id="download-windows" data-platform="windows"><div class="platform-heading"><svg class="platform-icon icon"><use href="#i-windows"/></svg><span class="recommended" hidden>YOUR PLATFORM</span></div><h3>Windows</h3><p>Windows 10 / 11 · x64</p><a class="button download-button" href="{{WINDOWS_SETUP_URL}}" data-asset="windows-setup">Download installer <svg class="icon"><use href="#i-download"/></svg></a><p class="download-meta">EXE installer <span>·</span> {{WINDOWS_SETUP_SIZE}}</p><a class="alternate-link" href="{{WINDOWS_PORTABLE_URL}}" data-asset="windows-portable">Or get the portable ZIP <svg class="icon"><use href="#i-arrow"/></svg></a><p class="platform-note">Requires WebView2. The installer can set it up for you.</p></article>
+          <article class="download-card" id="download-macos" data-platform="macos"><div class="platform-heading"><svg class="platform-icon icon"><use href="#i-apple"/></svg><span class="recommended" hidden>YOUR PLATFORM</span></div><h3>macOS</h3><p>Apple Silicon & Intel</p><div class="architecture-control" role="group" aria-label="Mac processor"><button type="button" aria-pressed="true" data-mac="arm">Apple Silicon</button><button type="button" aria-pressed="false" data-mac="intel">Intel</button></div><a id="mac-download" class="button download-button" href="{{MAC_ARM_URL}}" data-asset="mac-arm">Download for Mac <svg class="icon"><use href="#i-download"/></svg></a><p class="download-meta" id="mac-meta">DMG <span>·</span> {{MAC_ARM_SIZE}} <span>·</span> M1 or newer</p><a class="alternate-link" id="mac-alternate" href="{{MAC_INTEL_URL}}" data-arm-url="{{MAC_ARM_URL}}" data-intel-url="{{MAC_INTEL_URL}}" data-arm-size="{{MAC_ARM_SIZE}}" data-intel-size="{{MAC_INTEL_SIZE}}">Get the Intel Mac version <svg class="icon"><use href="#i-arrow"/></svg></a></article>
+          <article class="download-card" id="download-linux" data-platform="linux"><div class="platform-heading"><svg class="platform-icon icon"><use href="#i-linux"/></svg><span class="recommended" hidden>YOUR PLATFORM</span></div><h3>Linux</h3><p>x64 · AppImage or Debian package</p><a class="button download-button" href="{{LINUX_APPIMAGE_URL}}" data-asset="linux-appimage">Download AppImage <svg class="icon"><use href="#i-download"/></svg></a><p class="download-meta">AppImage <span>·</span> {{LINUX_APPIMAGE_SIZE}}</p><a class="alternate-link" href="{{LINUX_DEB_URL}}" data-asset="linux-deb">Or get the .deb package <svg class="icon"><use href="#i-arrow"/></svg></a><p class="platform-note">Make the AppImage executable before opening. May require FUSE 2.</p></article>
+        </div>
+        <div class="release-details"><p>Preview builds are unsigned; macOS builds are not notarized.<br>See <a href="#install-help">installation help</a> before your first launch.</p><div><a href="{{CHECKSUMS_URL}}">SHA-256 checksums <svg class="icon"><use href="#i-arrow"/></svg></a><a href="{{RELEASE_URL}}">Release notes & all downloads <svg class="icon"><use href="#i-arrow"/></svg></a></div></div>
+      </div>
+    </section>
+
+    <section id="install-help" class="section shell faq-section" aria-labelledby="faq-title"><div class="faq-heading"><p class="eyebrow">A FEW THINGS, CLEARED UP.</p><h2 id="faq-title">Room for<br>questions.</h2><a href="https://github.com/sarvesh-kr/sift/issues" class="text-link">Ask on GitHub <svg class="icon"><use href="#i-arrow"/></svg></a></div><div class="faq-list">
+      <details><summary>Is Sift free?</summary><p>Yes. Sift is free and open source under the MIT license. There’s no account, subscription, or paid upgrade. You can inspect the code and help shape it on <a href="https://github.com/sarvesh-kr/sift">GitHub</a>.</p></details>
+      <details><summary>Does Sift upload my files?</summary><p>No. The desktop app scans and compares files locally. It doesn’t send your files or inventory to a server. Exporting a JSON inventory is optional, and that report contains file names and paths, so share it thoughtfully.</p></details>
+      <details><summary>What happens when I clean up files?</summary><p>You select files and review them before confirming. Sift moves them to your operating system’s trash, with no permanent-delete fallback. Restore files through the system trash. Cleanup suggestions explain why files are candidates; you decide whether they’re still useful.</p></details>
+      <details><summary>Why might my computer show a security warning?</summary><p>This preview is unsigned, and macOS builds are not notarized. Download only from this site’s linked GitHub release and compare its SHA-256 checksum if needed. Windows may show SmartScreen; macOS may require approval in System Settings → Privacy & Security. Only proceed if you trust the source. See the <a href="https://github.com/sarvesh-kr/sift#run-the-desktop-application">platform prerequisites</a> if a runtime is missing.</p></details>
+      <details><summary>Which Mac download should I choose?</summary><p>Open the Apple menu → About This Mac. If you see an Apple M-series chip (M1 or newer), choose Apple Silicon. If you see an Intel processor, choose Intel. Both downloads are DMG files.</p></details>
+      <details><summary>Can I clean my drive from this website?</summary><p>Storage scanning and cleanup happen in the desktop app. This website introduces Sift and provides downloads. On first launch, the app shows a labeled sample workspace; choose <strong>Scan a folder</strong> to explore your own files.</p></details>
+      <details><summary>What should I know about the preview?</summary><p>Sift is an early release. Scans follow your current user permissions, skip symlinks, and stop at 500,000 files. Categories use file extensions; suggestions aren’t proof that a file is safe to remove. Read the <a href="https://github.com/sarvesh-kr/sift#scope-and-practical-limits">current scope and limits</a> for more detail. Mobile cleanup and automatic OS or browser-cache cleaning are not included.</p></details>
+    </div></section>
+  </main>
+
+  <footer class="footer shell"><div class="footer-top"><a href="#" class="brand" aria-label="Sift home"><img src="assets/icon.svg" width="38" height="38" alt=""><span>sift<span class="brand-dot">.</span></span></a><p>A little less clutter. A little more possibility.</p><a href="https://github.com/sarvesh-kr/sift" class="text-link"><svg class="icon"><use href="#i-github"/></svg>Made in the open <svg class="icon"><use href="#i-arrow"/></svg></a></div><div class="footer-bottom"><p>© {{YEAR}} Sift. Thoughtfully made by <a href="https://sarvesh.si">Sarvesh</a>.</p><div><a href="https://github.com/sarvesh-kr/sift/blob/main/LICENSE">MIT license</a><a href="{{RELEASE_URL}}">Release {{VERSION}}</a><a href="#download">Get Sift ↑</a></div></div></footer>
+</body>
+</html>

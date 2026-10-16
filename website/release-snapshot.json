@@ -1,0 +1,100 @@
+[
+  {
+    "tag_name": "v0.2.0",
+    "draft": false,
+    "prerelease": true,
+    "published_at": "2026-10-16T18:07:37Z",
+    "assets": [
+      {
+        "name": "SHA256SUMS-linux-x64.txt",
+        "size": 290,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/SHA256SUMS-linux-x64.txt"
+      },
+      {
+        "name": "SHA256SUMS-macos-apple-silicon.txt",
+        "size": 214,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/SHA256SUMS-macos-apple-silicon.txt"
+      },
+      {
+        "name": "SHA256SUMS-macos-intel.txt",
+        "size": 198,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/SHA256SUMS-macos-intel.txt"
+      },
+      {
+        "name": "SHA256SUMS-windows-x64.txt",
+        "size": 309,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/SHA256SUMS-windows-x64.txt"
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "size": 1008,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/SHA256SUMS.txt"
+      },
+      {
+        "name": "Sift-0.2.0-linux-x64-build-info.json",
+        "size": 501,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-linux-x64-build-info.json"
+      },
+      {
+        "name": "Sift-0.2.0-linux-x64.AppImage",
+        "size": 80747000,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-linux-x64.AppImage"
+      },
+      {
+        "name": "Sift-0.2.0-linux-x64.deb",
+        "size": 2084892,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-linux-x64.deb"
+      },
+      {
+        "name": "Sift-0.2.0-macos-apple-silicon-build-info.json",
+        "size": 491,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-macos-apple-silicon-build-info.json"
+      },
+      {
+        "name": "Sift-0.2.0-macos-apple-silicon.dmg",
+        "size": 2003098,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-macos-apple-silicon.dmg"
+      },
+      {
+        "name": "Sift-0.2.0-macos-intel-build-info.json",
+        "size": 484,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-macos-intel-build-info.json"
+      },
+      {
+        "name": "Sift-0.2.0-macos-intel.dmg",
+        "size": 2115790,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-macos-intel.dmg"
+      },
+      {
+        "name": "Sift-0.2.0-windows-x64-build-info.json",
+        "size": 503,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-windows-x64-build-info.json"
+      },
+      {
+        "name": "Sift-0.2.0-windows-x64-portable.zip",
+        "size": 1870092,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-windows-x64-portable.zip"
+      },
+      {
+        "name": "Sift-0.2.0-windows-x64-setup.exe",
+        "size": 1555236,
+        "state": "uploaded",
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.2.0/Sift-0.2.0-windows-x64-setup.exe"
+      }
+    ]
+  }
+]

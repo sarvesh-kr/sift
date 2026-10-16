@@ -5,7 +5,7 @@
 [![Quality checks](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml)
 [![Desktop builds](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml)
 
-**[Download the preview release](https://github.com/sarvesh-kr/sift/releases)** · [Build status](https://github.com/sarvesh-kr/sift/actions) · [Build/release instructions](docs/RELEASING.md)
+**[Website & downloads](https://sift.sarvesh.si)** · [GitHub releases](https://github.com/sarvesh-kr/sift/releases) · [Build status](https://github.com/sarvesh-kr/sift/actions) · [Build/release instructions](docs/RELEASING.md)
 
 | Computer | Download |
 | --- | --- |
@@ -126,6 +126,11 @@ native-core/             Independently tested Rust scan/hash/trash library
 src-tauri/               Native commands, desktop configuration, app icons
 tests/                   Playwright interface checks
 .github/workflows/       Per-platform package builds
+website/                 GitHub Pages marketing and download website
 ```
+
+The public website is hosted at **https://sift.sarvesh.si** with release-aware
+downloads, app previews, and installation help. See [docs/WEBSITE.md](docs/WEBSITE.md)
+for editing, local preview, and automatic GitHub Pages deployment.
 
 The Rust scan session is the cleanup allowlist. The frontend has no generic filesystem or shell plugin permission. Bundled content uses a restrictive CSP; fonts and assets load locally.

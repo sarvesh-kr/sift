@@ -1,0 +1,94 @@
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'website-tests/**'
+      - 'scripts/build-site.py'
+      - 'playwright.website.config.ts'
+      - '.github/workflows/pages.yml'
+  release:
+    types: [published]
+  # Releases created with GITHUB_TOKEN do not emit another workflow event.
+  # Refresh downloads after our desktop workflow has uploaded every asset.
+  workflow_run:
+    workflows: ['Desktop builds']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Resolve complete release downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases" > "$RUNNER_TEMP/sift-releases.json"
+          python3 scripts/build-site.py --releases "$RUNNER_TEMP/sift-releases.json"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Check downloads, mobile layout, and keyboard interaction
+        run: npx playwright test --config playwright.website.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: website-test-results
+          path: test-results/
+          retention-days: 7
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish Sift website
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Enforce HTTPS for the custom domain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in {1..10}; do
+            if gh api --method PUT "repos/$GITHUB_REPOSITORY/pages" -F https_enforced=true; then
+              exit 0
+            fi
+            echo "Waiting for GitHub Pages certificate provisioning (attempt $attempt)."
+            sleep 20
+          done
+          echo 'Could not enforce HTTPS; check the Pages custom-domain certificate.'
+          exit 1
