@@ -2,8 +2,9 @@
 
 The public marketing and download site is **https://sift.sarvesh.si**, hosted on
 GitHub Pages from this repository. It is separate from the desktop React app.
-Cloudflare provides DNS, with a DNS-only CNAME from `sift.sarvesh.si` to
-`sarvesh-kr.github.io`. GitHub Pages owns HTTPS and the custom-domain setting.
+Cloudflare provides DNS and the edge proxy, with a proxied CNAME from
+`sift.sarvesh.si` to `sarvesh-kr.github.io`. GitHub Pages serves the site; Cloudflare
+redirects HTTP visitors to HTTPS and verifies the origin using Full (strict) TLS.
 
 ## Edit and preview
 
@@ -50,9 +51,24 @@ version; if none is complete, deployment fails instead of publishing bad links.
 Links are rendered into HTML at build time, so visitors do not depend on GitHub
 API rate limits or JavaScript. All downloads go directly to GitHub release assets.
 
-GitHub Pages settings must retain **GitHub Actions** as the source,
-`sift.sarvesh.si` as the domain, and **Enforce HTTPS**. `website/CNAME` also records
-the domain in the source. The `github-pages` environment is the deployment target.
+GitHub Pages settings must retain **GitHub Actions** as the source and
+`sift.sarvesh.si` as the domain. `website/CNAME` also records the domain in the
+source. The `github-pages` environment is the deployment target. The workflow
+checks the live HTTPS page after deployment.
+
+Two Cloudflare rules apply only to `sift.sarvesh.si`:
+
+- **Sift HTTPS redirect**, phase `http_request_dynamic_redirect`: match
+  `(http.host eq "sift.sarvesh.si" and not ssl)`, then 301 redirect to
+  `concat("https://sift.sarvesh.si", http.request.uri.path)` while preserving the
+  query string.
+- **Sift origin TLS**, phase `http_config_settings`: match
+  `(http.host eq "sift.sarvesh.si")` and set `ssl` to `strict`.
+
+GitHub accepts deployment tokens but rejects updating its **Enforce HTTPS**
+repository setting through the available integrations. HTTPS redirects are
+therefore handled by Cloudflare; the site does not depend on changing that
+GitHub setting. Keep the Sift DNS record proxied for these rules to apply.
 
 ## Screenshots and fonts
 

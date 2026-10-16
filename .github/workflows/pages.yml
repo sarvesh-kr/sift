@@ -74,21 +74,12 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://sift.sarvesh.si
     steps:
       - name: Publish Sift website
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Enforce HTTPS for the custom domain
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Verify the live HTTPS website
         run: |
-          for attempt in {1..10}; do
-            if gh api --method PUT "repos/$GITHUB_REPOSITORY/pages" -F https_enforced=true; then
-              exit 0
-            fi
-            echo "Waiting for GitHub Pages certificate provisioning (attempt $attempt)."
-            sleep 20
-          done
-          echo 'Could not enforce HTTPS; check the Pages custom-domain certificate.'
-          exit 1
+          curl --fail --silent --show-error --retry 4 --retry-delay 5 https://sift.sarvesh.si/ \
+            | python3 -c 'import sys; page=sys.stdin.read(); assert "<title>Sift — Your space, simplified.</title>" in page; assert "{{" not in page; print("Live HTTPS page verified.")'
