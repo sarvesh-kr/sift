@@ -316,6 +316,61 @@ mod tests {
     use super::*;
     use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt, sync::atomic::AtomicBool};
 
+    fn restore_fixtures(report: &ScanReport, expected_count: usize) {
+        let _apartment = Apartment::new().unwrap();
+        let items: Vec<_> = trash::os_limited::list()
+            .unwrap()
+            .into_iter()
+            .filter(|item| {
+                fs::canonicalize(&item.original_parent).ok().as_deref()
+                    == Some(Path::new(&report.root))
+            })
+            .collect();
+        assert_eq!(
+            items.len(),
+            expected_count,
+            "Every reported success must be present in the Recycle Bin"
+        );
+        let wide =
+            |path: &std::ffi::OsStr| -> Vec<u16> { path.encode_wide().chain(Some(0)).collect() };
+        let parent = wide(shell_path(Path::new(&report.root)).unwrap().as_os_str());
+        for item in items {
+            // Shell display names can hide registered file extensions. Restore
+            // with the original scanned filename, not a display-name-derived
+            // path (the dependency's restore helper silently renames these).
+            let original = report
+                .files
+                .iter()
+                .find(|file| {
+                    Some(file.name.as_str()) == item.name.to_str()
+                        || Path::new(&file.name).file_stem() == Some(item.name.as_ref())
+                })
+                .expect("Only this test's unique fixture filenames may be restored");
+            let source = wide(item.id.as_ref());
+            let name = wide(original.name.as_ref());
+            unsafe {
+                let operation: IFileOperation =
+                    CoCreateInstance(&FileOperation, None, CLSCTX_INPROC_SERVER).unwrap();
+                operation
+                    .SetOperationFlags(FOF_NO_UI | FOF_ALLOWUNDO)
+                    .unwrap();
+                let from: IShellItem =
+                    SHCreateItemFromParsingName(PCWSTR(source.as_ptr()), None).unwrap();
+                let to: IShellItem =
+                    SHCreateItemFromParsingName(PCWSTR(parent.as_ptr()), None).unwrap();
+                operation
+                    .MoveItem(&from, &to, PCWSTR(name.as_ptr()), None)
+                    .unwrap();
+                operation.PerformOperations().unwrap();
+                assert!(!operation.GetAnyOperationsAborted().unwrap().as_bool());
+            }
+            assert!(
+                Path::new(&original.path).exists(),
+                "Original fixture filename must be restored"
+            );
+        }
+    }
+
     #[test]
     fn recycles_real_files_with_unicode_names_and_restores_only_test_fixtures() {
         let directory = tempfile::tempdir().unwrap();
@@ -335,20 +390,7 @@ mod tests {
             result.failed.iter().map(|f| &f.error).collect::<Vec<_>>()
         );
         assert_eq!(result.removed.len(), 3);
-        let items: Vec<_> = trash::os_limited::list()
-            .unwrap()
-            .into_iter()
-            .filter(|item| {
-                fs::canonicalize(&item.original_parent).ok().as_deref()
-                    == Some(Path::new(&report.root))
-            })
-            .collect();
-        assert_eq!(
-            items.len(),
-            3,
-            "Every reported success must be present in the Recycle Bin"
-        );
-        trash::os_limited::restore_all(items).unwrap();
+        restore_fixtures(&report, 3);
         for path in paths {
             assert_eq!(fs::read(path).unwrap(), b"Sift recycle regression fixture");
         }
@@ -388,15 +430,8 @@ mod tests {
         );
         assert!(locked.exists());
         drop(handle);
-        let items: Vec<_> = trash::os_limited::list()
-            .unwrap()
-            .into_iter()
-            .filter(|item| {
-                fs::canonicalize(&item.original_parent).ok().as_deref()
-                    == Some(Path::new(&report.root))
-            })
-            .collect();
-        trash::os_limited::restore_all(items).unwrap();
+        restore_fixtures(&report, 1);
+        assert_eq!(fs::read(available).unwrap(), b"recycle available");
     }
 
     #[test]
