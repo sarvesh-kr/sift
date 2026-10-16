@@ -4,16 +4,15 @@
 //! must not be counted as a successful recycle or poison the following file.
 use super::{trash_selected_using, Progress, ScanReport, TrashFailure, TrashResult};
 use std::{
-    cell::RefCell,
     fs,
     os::windows::ffi::OsStrExt,
     path::{Component, Path, PathBuf, Prefix},
-    rc::Rc,
+    sync::{Arc, Mutex},
 };
 use windows::{
     core::{implement, Error, Ref, Result, HRESULT, PCWSTR},
     Win32::{
-        Foundation::{E_ABORT, E_NOTIMPL},
+        Foundation::{E_ABORT, E_FAIL, E_NOTIMPL},
         System::Com::{
             CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
             COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE,
@@ -109,9 +108,11 @@ struct Outcome {
     recycled_item: bool,
 }
 
+// windows-rs makes this COM sink agile; callbacks may cross apartment threads.
+// Keep its shared state synchronized even though operations start on our STA.
 #[implement(IFileOperationProgressSink)]
 struct Sink {
-    outcome: Rc<RefCell<Outcome>>,
+    outcome: Arc<Mutex<Outcome>>,
 }
 
 #[allow(non_snake_case)]
@@ -124,7 +125,10 @@ impl IFileOperationProgressSink_Impl for Sink_Impl {
     }
     fn PreDeleteItem(&self, flags: u32, _: Ref<IShellItem>) -> Result<()> {
         if flags & TSF_DELETE_RECYCLE_IF_POSSIBLE.0 as u32 == 0 {
-            self.outcome.borrow_mut().status = Some(COPYENGINE_E_RECYCLE_FORCE_NUKE);
+            self.outcome
+                .lock()
+                .map_err(|_| Error::from_hresult(E_FAIL))?
+                .status = Some(COPYENGINE_E_RECYCLE_FORCE_NUKE);
             return Err(Error::from_hresult(COPYENGINE_E_RECYCLE_FORCE_NUKE));
         }
         Ok(())
@@ -136,7 +140,10 @@ impl IFileOperationProgressSink_Impl for Sink_Impl {
         status: HRESULT,
         recycled: Ref<IShellItem>,
     ) -> Result<()> {
-        let mut outcome = self.outcome.borrow_mut();
+        let mut outcome = self
+            .outcome
+            .lock()
+            .map_err(|_| Error::from_hresult(E_FAIL))?;
         outcome.status = Some(status);
         outcome.recycled_item = recycled.is_some();
         Ok(())
@@ -227,9 +234,9 @@ impl IFileOperationProgressSink_Impl for Sink_Impl {
 fn recycle(path: &Path) -> std::result::Result<(), String> {
     let plain = shell_path(path)?;
     let wide: Vec<u16> = plain.as_os_str().encode_wide().chain(Some(0)).collect();
-    let outcome = Rc::new(RefCell::new(Outcome::default()));
+    let outcome = Arc::new(Mutex::new(Outcome::default()));
     let sink: IFileOperationProgressSink = Sink {
-        outcome: Rc::clone(&outcome),
+        outcome: Arc::clone(&outcome),
     }
     .into();
     // SAFETY: Shell calls stay on this initialized STA. All COM objects and the
@@ -254,7 +261,9 @@ fn recycle(path: &Path) -> std::result::Result<(), String> {
             .DeleteItem(&item, &sink)
             .map_err(|error| describe(error.code()))?;
         let performed = operation.PerformOperations();
-        let state = outcome.borrow();
+        let state = outcome.lock().map_err(|_| {
+            "Could not read the Windows recycle result. Rescan before retrying.".to_owned()
+        })?;
         // Windows can report COPYENGINE_S_DONT_PROCESS_CHILDREN after recycling
         // a regular file. It is a completion code, unlike S_USER_IGNORED. Keep
         // requiring the destination item and disappearance of the source below.
@@ -393,7 +402,7 @@ mod tests {
     #[test]
     fn permanent_delete_requests_are_blocked_by_the_callback() {
         let sink = Sink {
-            outcome: Rc::new(RefCell::new(Outcome::default())),
+            outcome: Arc::new(Mutex::new(Outcome::default())),
         };
         let sink: IFileOperationProgressSink = sink.into();
         assert!(unsafe { sink.PreDeleteItem(0, None) }.is_err());
