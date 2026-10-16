@@ -1,0 +1,1 @@
+{"$schema":"../gen/schemas/desktop-schema.json","identifier":"main-window","description":"Local window events only. File access is limited to the Rust scan session.","windows":["main"],"permissions":["core:event:default"]}

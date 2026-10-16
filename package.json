@@ -1,0 +1,31 @@
+{
+  "name": "sift-desktop",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "tauri": "tauri",
+    "test:ui": "playwright test",
+    "test:core": "cargo test --manifest-path native-core/Cargo.toml"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "@tauri-apps/api": "^2.8.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@tauri-apps/cli": "^2.8.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.9.2",
+    "vite": "^6.3.6"
+  }
+}

@@ -1,0 +1,17 @@
+[package]
+name = "sift-core"
+version = "0.2.0"
+edition = "2021"
+description = "Local filesystem scanning and reviewed trash operations for Sift"
+license = "MIT"
+
+[dependencies]
+blake3 = "1.8"
+file-id = "0.2"
+fs2 = "0.4"
+serde = { version = "1", features = ["derive"] }
+trash = "5.2"
+walkdir = "2.5"
+
+[dev-dependencies]
+tempfile = "3"

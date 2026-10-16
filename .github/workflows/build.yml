@@ -1,0 +1,106 @@
+name: Desktop builds
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+  build:
+    name: Build ${{ matrix.label }}
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows-x64
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - os: ubuntu-22.04
+            label: linux-x64
+            target: x86_64-unknown-linux-gnu
+            bundles: deb,appimage
+          - os: macos-15
+            label: macos-apple-silicon
+            target: aarch64-apple-darwin
+            bundles: dmg
+          - os: macos-15-intel
+            label: macos-intel
+            target: x86_64-apple-darwin
+            bundles: dmg
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          workspaces: |
+            src-tauri -> target
+            native-core -> target
+      - name: Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libxdo-dev libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf libfuse2 file
+      - name: Verify release version
+        run: python scripts/check-version.py
+      - run: npm ci
+      - name: Test scanner on this operating system
+        run: cargo test --manifest-path native-core/Cargo.toml --locked
+      - name: Build native installer
+        uses: tauri-apps/tauri-action@v1
+        env:
+          NO_STRIP: 'true'
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} -- --locked
+      - name: Prepare downloads and checksums
+        run: python scripts/package-release.py --target ${{ matrix.target }} --label ${{ matrix.label }}
+      - name: Upload platform downloads
+        uses: actions/upload-artifact@v4
+        with:
+          name: sift-${{ matrix.label }}
+          path: dist-release/*
+          if-no-files-found: error
+          retention-days: 30
+  release:
+    name: Publish preview downloads
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sift-*
+          path: dist-release
+          merge-multiple: true
+      - name: Combine release checksums
+        run: python scripts/release-checksums.py
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Sift $GITHUB_REF_NAME — Preview" --notes-file .github/RELEASE_NOTES.md --prerelease
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist-release/* --clobber

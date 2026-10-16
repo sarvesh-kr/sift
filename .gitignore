@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-release/
+**/target/
+test-results/
+playwright-report/
+*.zip
+.DS_Store
+*.tsbuildinfo
+__pycache__/
+src-tauri/gen/schemas/
