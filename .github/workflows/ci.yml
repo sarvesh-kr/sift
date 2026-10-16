@@ -28,8 +28,12 @@ jobs:
           path: test-results/
           retention-days: 7
   core:
-    name: Rust tests and formatting
-    runs-on: ubuntu-24.04
+    name: Native safety checks (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

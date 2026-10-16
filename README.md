@@ -20,6 +20,8 @@ Installers and archives are attached to tagged preview releases after every plat
 
 Version **0.2.0** adds an explanation-based Cleanup Center, folder drill-down, volume capacity and available-space readings, staged duplicate comparison with separate byte verification, and retained-copy protection. See [the competitive goals and benchmark gates](PRODUCT-GOALS.md) for the path toward a leading storage-cleanup product. No superiority over commercial cleaners has been established.
 
+Version **0.2.1** replaces Windows cleanup's generic “Some operations were aborted” error with explicit Recycle Bin operations, per-file Windows error codes and actionable hints, persistent cleanup results, and progress. Files are only counted as recycled after the Shell confirms a destination in the bin and the original path is absent. Successful files leave the selection; unconfirmed files stay in review. Windows runtime regression tests recycle and restore disposable fixtures and cover locked files without permanent-delete fallbacks.
+
 ## What works
 
 - Select a local folder or drive with the native folder picker.

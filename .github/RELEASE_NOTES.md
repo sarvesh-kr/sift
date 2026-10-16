@@ -1,5 +1,9 @@
 Sift is a local desktop storage explorer and cleanup assistant. This preview includes an explanation-based Cleanup Center, folder drill-down, exact duplicate comparison, retained-copy protection, and system-trash cleanup.
 
+**0.2.1 cleanup fix:** Windows now uses an isolated STA worker and explicit Recycle Bin operations instead of the dependency that reduced failures to “Some operations were aborted.” Each file reports its own Windows error code and recovery hint. A skipped operation is never counted as a successful recycle. Permanent-delete requests are blocked. Successful files leave the selection; failed or unconfirmed files retain their full-path results for review. Cleanup progress is shown, and unrelated duplicate groups are no longer revalidated on each cleanup.
+
+Windows CI now recycles and restores disposable fixture files with Unicode names, checks that a locked file does not block the next file, and exercises the permanent-delete callback guard. These tests also run on ordinary pushes and pull requests.
+
 Choose the download for your computer:
 
 - **Windows x64:** `windows-x64-setup.exe`, or the portable ZIP. Requires WebView2; the installer can install the runtime if missing.

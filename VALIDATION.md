@@ -1,14 +1,31 @@
-# Sift 0.2.0 build and validation record
+# Sift 0.2.1 validation
 
-Validated on 16 October 2026 in a Debian 13 x86-64 environment, using Rust 1.99.1 and Node.js 24.19.0.
+The release pipeline requires passing interface tests and native safety tests
+before publishing installers. Build metadata in each release identifies its exact
+source commit. See GitHub Actions for the recorded outcome on each runner.
 
-- TypeScript checks and the Vite production build passed, with no CSS syntax warnings.
-- All 10 Rust core tests passed, including sampled-content filtering, full-hash rejection of files with matching samples, separate byte verification, cancellation, hard links, changed-file and symlink checks, retained-copy protection, and trash failures.
-- All 12 frontend checks passed: 3 analysis tests and 9 Chromium interface tests covering file search, cleanup explanations, folder scoping, keeper selection, blocked last-copy removal, preferences, responsive layouts, selection scope, and keyboard focus.
-- The Rust scanner indexed 10,000 generated files in 40 folders with correct totals and no skipped entries. Each file was 1 KiB; the recorded scan took 34 ms on this cached filesystem. This is a smoke test, not a real-drive or competitor performance benchmark.
-- The full Windows x64 desktop application was cross-compiled for x86_64-pc-windows-msvc and bundled into an NSIS installer successfully. The executable is approximately 3.55 MiB and the installer 1.61 MiB. WebView2 is a separate system runtime.
-- Screenshots show the labeled sample workspace. Sample data is not a scan of this build environment.
+- **Cross-platform Rust regressions:** scanning, cancellation, sampled/full
+  duplicate comparisons, hard links, changed paths, retained-copy protection,
+  unique cleanup outcomes, progress, partial failure, and no permanent-delete
+  fallback. Unix also checks symlink redirection.
+- **Windows runtime regressions:** recycle three disposable files including a
+  Unicode name, enumerate those exact fixtures in the Recycle Bin, restore their
+  contents, handle a locked file followed by a recyclable file, and refuse a
+  callback requesting deletion without recycling. Fixture filtering uses the
+  unique test directory; no unrelated Recycle Bin items are modified.
+- **14 frontend checks:** storage analysis and review flows, keyboard focus,
+  responsive layout, and mocked native partial/zero-success cleanup. These verify
+  that per-file errors persist and successful files are excluded from a retry.
+- **Four website checks:** release links, Mac architecture selection, previews,
+  narrow layouts, and download operation without JavaScript.
+- TypeScript, Vite, Rust formatting, and Windows-target compilation checks.
+- Native installer builds for Windows x64, Linux x64, and both Mac architectures.
 
-The Windows app and installer have not been launched on Windows here. WebView2 rendering, native dialogs, volume-space readings, and Recycle Bin behavior need Windows runtime qualification. macOS and Linux desktop packages have not been built or launched here. The included CI workflow provides per-platform package builds. Builds are unsigned.
+These checks do not establish zero bugs or performance superiority. Interactive
+GUI testing, unusual Windows policies, huge files, cloud placeholders,
+long paths, and very large inventories still need qualification on real devices.
+Windows cleanup deliberately refuses unsupported/non-recyclable paths and
+reports errors rather than deleting permanently. Recycle Bin capacity, open-file
+locks, and OS access rules can prevent a legitimate recycle operation.
 
-See README.md for reproduction steps and PRODUCT-GOALS.md for the remaining engineering work and comparative benchmark gates. No best-in-class or superiority claim has been established.
+See README.md for reproduction steps and PRODUCT-GOALS.md for benchmark gates.

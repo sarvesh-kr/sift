@@ -9,6 +9,9 @@ use std::{
 };
 use walkdir::WalkDir;
 
+#[cfg(windows)]
+mod windows_trash;
+
 pub const MAX_FILES: usize = 500_000;
 
 #[derive(Clone, Debug, Serialize)]
@@ -504,15 +507,39 @@ pub fn find_duplicates(
 }
 
 pub fn trash_selected(report: &ScanReport, paths: &[String]) -> TrashResult {
-    trash_selected_with(report, paths, |path| {
-        trash::delete(path).map_err(|error| error.to_string())
-    })
+    trash_selected_with_progress(report, paths, |_| {})
 }
 
+pub fn trash_selected_with_progress(
+    report: &ScanReport,
+    paths: &[String],
+    progress: impl FnMut(Progress) + Send,
+) -> TrashResult {
+    #[cfg(windows)]
+    return windows_trash::trash_selected(report, paths, progress);
+    #[cfg(not(windows))]
+    trash_selected_using(
+        report,
+        paths,
+        |path| trash::delete(path).map_err(|error| error.to_string()),
+        progress,
+    )
+}
+
+#[cfg(test)]
 fn trash_selected_with(
     report: &ScanReport,
     paths: &[String],
+    move_to_trash: impl FnMut(&Path) -> Result<(), String>,
+) -> TrashResult {
+    trash_selected_using(report, paths, move_to_trash, |_| {})
+}
+
+fn trash_selected_using(
+    report: &ScanReport,
+    paths: &[String],
     mut move_to_trash: impl FnMut(&Path) -> Result<(), String>,
+    mut progress: impl FnMut(Progress),
 ) -> TrashResult {
     let index: HashMap<&str, &FileEntry> = report
         .files
@@ -525,10 +552,20 @@ fn trash_selected_with(
         volume: None,
     };
     let selected: HashSet<&str> = paths.iter().map(String::as_str).collect();
+    let selected_groups: HashSet<&str> = selected
+        .iter()
+        .filter_map(|path| {
+            index
+                .get(path)
+                .and_then(|file| file.duplicate_group.as_deref())
+        })
+        .collect();
     let mut keepers: HashMap<&str, &FileEntry> = HashMap::new();
     for file in &report.files {
         if let Some(group) = file.duplicate_group.as_deref() {
-            if !selected.contains(file.path.as_str())
+            if selected_groups.contains(group)
+                && !keepers.contains_key(group)
+                && !selected.contains(file.path.as_str())
                 && validate_candidate(Path::new(&report.root), file).is_ok()
             {
                 keepers.entry(group).or_insert(file);
@@ -536,6 +573,7 @@ fn trash_selected_with(
         }
     }
     let mut seen = HashSet::new();
+    let mut last_update = Instant::now();
     for path in paths {
         if !seen.insert(path) {
             continue;
@@ -570,6 +608,14 @@ fn trash_selected_with(
                 path: path.clone(),
                 error,
             }),
+        }
+        if last_update.elapsed().as_millis() >= 120 || seen.len() == selected.len() {
+            progress(Progress {
+                files: seen.len(),
+                bytes: 0,
+                phase: "Processing cleanup files",
+            });
+            last_update = Instant::now();
         }
     }
     result.volume = volume_space(Path::new(&report.root));
@@ -729,6 +775,44 @@ mod tests {
         assert!(result.removed.is_empty());
         assert_eq!(result.failed[0].error, "Trash unavailable");
         assert!(dir.path().join("important.txt").exists());
+    }
+
+    #[test]
+    fn cleanup_reports_unique_outcomes_and_progress_after_a_failure() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("locked.txt"), b"locked").unwrap();
+        fs::write(dir.path().join("okay.txt"), b"okay").unwrap();
+        let report = scan(dir.path(), &AtomicBool::new(false), |_| {}).unwrap();
+        let locked = Path::new(&report.root)
+            .join("locked.txt")
+            .to_str()
+            .unwrap()
+            .to_owned();
+        let okay = Path::new(&report.root)
+            .join("okay.txt")
+            .to_str()
+            .unwrap()
+            .to_owned();
+        let mut processed = Vec::new();
+        let mut calls = 0;
+        let result = trash_selected_using(
+            &report,
+            &[locked.clone(), locked.clone(), okay.clone()],
+            |path| {
+                calls += 1;
+                if path.ends_with("locked.txt") {
+                    Err("File locked".into())
+                } else {
+                    Ok(())
+                }
+            },
+            |progress| processed.push(progress.files),
+        );
+        assert_eq!(calls, 2);
+        assert_eq!(result.removed, vec![okay]);
+        assert_eq!(result.failed.len(), 1);
+        assert_eq!(result.failed[0].path, locked);
+        assert_eq!(processed.last(), Some(&2));
     }
 
     #[cfg(unix)]

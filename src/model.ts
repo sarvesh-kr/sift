@@ -3,6 +3,7 @@ export type FileEntry = { path: string; name: string; size: number; modified: nu
 export type VolumeSpace = { totalBytes: number; availableBytes: number };
 export type ScanReport = { root: string; files: FileEntry[]; skipped: number; truncated: boolean; elapsedMs: number; cancelled: boolean; volume?: VolumeSpace | null };
 export type Progress = { files: number; bytes: number; phase: string };
+export type TrashResult = { removed: string[]; failed: { path: string; error: string }[]; volume: VolumeSpace | null };
 export const categories: Category[] = ['Videos', 'Images', 'Documents', 'Audio', 'Archives', 'Applications', 'Code', 'Other'];
 export const colors: Record<Category, string> = { Videos: '#5d8b76', Images: '#91bba4', Documents: '#b7cdb2', Audio: '#d6bc91', Archives: '#a6b5c9', Applications: '#b8a7c8', Code: '#8db9bc', Other: '#d8dfdb' };
 export function bytes(n: number, decimals = 1): string {

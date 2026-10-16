@@ -1,6 +1,6 @@
 [package]
 name = "sift-core"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Local filesystem scanning and reviewed trash operations for Sift"
 license = "MIT"
@@ -10,8 +10,17 @@ blake3 = "1.8"
 file-id = "0.2"
 fs2 = "0.4"
 serde = { version = "1", features = ["derive"] }
-trash = "5.2"
 walkdir = "2.5"
+
+[target.'cfg(not(windows))'.dependencies]
+trash = "5.2"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_System_Com", "Win32_UI_Shell"] }
+windows-core = "0.62"
+
+[target.'cfg(windows)'.dev-dependencies]
+trash = "5.2"
 
 [dev-dependencies]
 tempfile = "3"

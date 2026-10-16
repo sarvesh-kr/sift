@@ -121,6 +121,7 @@ async fn find_duplicates(
 
 #[tauri::command]
 async fn trash_files(
+    app: tauri::AppHandle,
     paths: Vec<String>,
     session: State<'_, Arc<Session>>,
 ) -> Result<TrashResult, String> {
@@ -130,7 +131,9 @@ async fn trash_files(
         let _guard = guard;
         let mut locked = session.report.lock().map_err(|error| error.to_string())?;
         let report = locked.as_mut().ok_or("Scan a folder first.")?;
-        let result = sift_core::trash_selected(report, &paths);
+        let result = sift_core::trash_selected_with_progress(report, &paths, |progress| {
+            let _ = app.emit("scan-progress", progress);
+        });
         report.volume = result.volume.clone();
         let removed: std::collections::HashSet<&String> = result.removed.iter().collect();
         report.files.retain(|file| !removed.contains(&file.path));
