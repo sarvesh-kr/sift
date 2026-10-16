@@ -255,15 +255,22 @@ fn recycle(path: &Path) -> std::result::Result<(), String> {
             .map_err(|error| describe(error.code()))?;
         let performed = operation.PerformOperations();
         let state = outcome.borrow();
+        // Windows can report COPYENGINE_S_DONT_PROCESS_CHILDREN after recycling
+        // a regular file. It is a completion code, unlike S_USER_IGNORED. Keep
+        // requiring the destination item and disappearance of the source below.
+        let completed = matches!(
+            state.status,
+            Some(HRESULT(0) | COPYENGINE_S_DONT_PROCESS_CHILDREN)
+        );
         if let Some(status) = state.status {
-            if status.0 != 0 {
+            if !completed {
                 return Err(describe(status));
             }
         }
         performed.map_err(|error| describe(error.code()))?;
         // S_OK alone is insufficient: skipped operations can be "successful".
         // Require the per-file callback and a destination item in the bin.
-        if state.status != Some(HRESULT(0)) || !state.recycled_item {
+        if !completed || !state.recycled_item {
             return Err("Windows did not confirm recycling this file. Check whether it is open, protected, or exceeds the Recycle Bin’s size limit. No permanent-delete fallback was used.".into());
         }
         match fs::symlink_metadata(path) {
