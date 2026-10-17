@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc, Mutex, RwLock,
     },
 };
 use tauri::{Emitter, Manager, State};
@@ -16,6 +16,7 @@ struct Session {
     busy: AtomicBool,
     cancel: AtomicBool,
     needs_rescan: AtomicBool,
+    preview_jobs: RwLock<()>,
 }
 
 struct BusyGuard(Arc<Session>);
@@ -163,6 +164,9 @@ async fn cleanup_files(
     }
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
+        // Retire our preview read handles before any rename/delete/overwrite.
+        // The busy flag prevents new preview readers while this worker waits.
+        let _preview_pause = session.preview_jobs.write().map_err(|e| e.to_string())?;
         let mut locked = session.report.lock().map_err(|error| error.to_string())?;
         let report = locked.as_mut().ok_or("Scan a folder first.")?;
         let result = sift_core::cleanup_selected_with_cancel(
@@ -208,24 +212,34 @@ async fn file_preview(
     path: String,
     session: State<'_, Arc<Session>>,
 ) -> Result<Option<sift_core::FilePreview>, String> {
-    // Bound native decoders independently of the webview's lazy-loading queue.
     static SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
     let permit = SLOTS.acquire().await.map_err(|e| e.to_string())?;
-    let (root, entry) = {
-        let locked = session.report.lock().map_err(|e| e.to_string())?;
-        let report = locked.as_ref().ok_or("Scan a folder first.")?;
-        let entry = report
-            .files
-            .iter()
-            .find(|entry| entry.path == path)
-            .cloned()
-            .ok_or("File is no longer in this scan.")?;
-        (PathBuf::from(&report.root), entry)
-    };
-    let result =
-        tauri::async_runtime::spawn_blocking(move || sift_core::file_preview(&root, &entry))
-            .await
-            .map_err(|e| e.to_string())?;
+    let session = Arc::clone(session.inner());
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        // Filesystem/locking/decoding stays off the IPC executor. New preview
+        // requests yield to scans and cleanup; existing readers finish first.
+        let _preview = session.preview_jobs.read().map_err(|e| e.to_string())?;
+        if session.busy.load(Ordering::Acquire) {
+            return Err("Previews paused during file operations.".into());
+        }
+        let (root, entry) = {
+            let locked = session
+                .report
+                .try_lock()
+                .map_err(|_| "File inventory is busy.")?;
+            let report = locked.as_ref().ok_or("Scan a folder first.")?;
+            let entry = report
+                .files
+                .iter()
+                .find(|entry| entry.path == path)
+                .cloned()
+                .ok_or("File is no longer in this scan.")?;
+            (PathBuf::from(&report.root), entry)
+        };
+        sift_core::file_preview(&root, &entry)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
     drop(permit);
     result
 }
