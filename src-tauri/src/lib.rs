@@ -340,7 +340,7 @@ async fn recovery_preview(
             .try_lock()
             .map_err(|_| "Recovery image is busy.")?
             .as_mut()
-            .ok_or("Scan an image first.")?
+            .ok_or("Scan a source first.")?
             .preview(&id)
     })
     .await
@@ -372,7 +372,7 @@ async fn export_recovery_files(
             .lock()
             .map_err(|e| e.to_string())?
             .as_mut()
-            .ok_or("Scan an image first.")?
+            .ok_or("Scan a source first.")?
             .export(&destination, &ids, &session.cancel, |progress| {
                 let _ = app.emit("recovery-progress", progress);
             })?;

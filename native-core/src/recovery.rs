@@ -1,5 +1,5 @@
-//! Read-only carving of contiguous files from a user-selected regular disk image.
-//! This deliberately makes no filesystem undelete or original-name claim.
+//! Read-only device recovery: NTFS deleted records and independent signature scans.
+//! Signature candidates have unknown original names, paths and deletion status.
 #[cfg(windows)]
 mod windows_source;
 use serde::Serialize;
@@ -432,7 +432,7 @@ impl RecoverySession {
                 bytes: position,
                 total: self.size,
                 found: self.report.files.len(),
-                phase: "Reading image · source unchanged",
+                phase: "Reading source · read-only access",
                 unit: "bytes",
             });
         }

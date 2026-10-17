@@ -105,6 +105,8 @@ test("launcher opens both workspaces, preserves clean selection, and never simul
     .check();
   await page.getByRole("button", { name: "Switch workspace" }).click();
   await page.getByRole("button", { name: "Recover data", exact: true }).click();
+  await expect(page.locator(".recovery-advanced")).not.toHaveAttribute("open", "");
+  await page.getByText("Advanced: disk-image tools",{exact:true}).click();
   await page
     .getByRole("button", { name: "Choose disk image", exact: true })
     .click();
@@ -128,6 +130,7 @@ test("native recovery filters, previews, inspects evidence, and exports only rev
   await page.goto("/");
   await page.getByRole("button", { name: "Recover data", exact: true }).click();
   await expect(page.getByRole("button",{name:"Open system trash"})).toHaveCount(0);
+  await page.getByText("Advanced: disk-image tools",{exact:true}).click();
   await page
     .getByRole("button", { name: "Choose disk image", exact: true })
     .click();
@@ -213,6 +216,7 @@ test("recovery review traps keyboard focus and cancellation preserves selected f
   await mockedRecovery(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Recover data", exact: true }).click();
+  await page.getByText("Advanced: disk-image tools",{exact:true}).click();
   await page
     .getByRole("button", { name: "Choose disk image", exact: true })
     .click();
@@ -246,13 +250,14 @@ test("closing the image clears candidates and releases the native evidence sessi
   await mockedRecovery(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Recover data", exact: true }).click();
+  await page.getByText("Advanced: disk-image tools",{exact:true}).click();
   await page
     .getByRole("button", { name: "Choose disk image", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Select all matches", exact: true })
     .click();
-  await page.getByRole("button", { name: "Close image", exact: true }).click();
+  await page.getByRole("button", { name: "Close source", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Recovery candidates" }),
   ).toHaveCount(0);
@@ -297,6 +302,7 @@ test("a cancelled destination and native export error keep review and selection 
     };
   });
   await page.getByRole("button", { name: "Recover data", exact: true }).click();
+  await page.getByText("Advanced: disk-image tools",{exact:true}).click();
   await page
     .getByRole("button", { name: "Choose disk image", exact: true })
     .click();

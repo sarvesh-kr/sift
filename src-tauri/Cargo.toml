@@ -1,6 +1,6 @@
 [package]
 name = "sift"
-version = "0.6.0"
+version = "0.6.1"
 description = "Your space, simplified. A local-first disk explorer."
 authors = ["Sift"]
 edition = "2021"

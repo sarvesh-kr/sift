@@ -1,4 +1,4 @@
-# Recovery in Sift 0.6 desktop / 0.4 Android
+# Recovery in Sift 0.6.1 desktop / 0.4 Android
 
 Recovery means finding lost or deleted file contents. The recovery workspace does not open a recycle bin. Cleaning and Sift trash remain in the cleaning workspace.
 

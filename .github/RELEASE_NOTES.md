@@ -1,3 +1,11 @@
+# Sift 0.6.1 — storage-first recovery
+
+Choose a local drive or connected device directly. Disk-image tools are collapsed under Advanced, and completed scans bring their results into view. Source-oriented labels apply to drives and images, and deep-scan progress describes read-only access without claiming a live disk cannot change. Includes the NTFS undelete and independent deep scanning delivered in 0.6.0 below.
+
+The interface, native safety suites and direct Windows deleted-file recovery checks gate all four platform builds. See [capabilities and limits](https://github.com/sarvesh-kr/sift/blob/main/docs/RECOVERY.md). Installers remain unsigned and Mac packages are not notarized.
+
+---
+
 # Sift 0.6.0 — device recovery preview
 
 Recovery now starts with selecting a local drive or connected storage device. NTFS mode reads deleted filesystem records, retains original names and surviving folder paths, follows resident/fragmented/sparse contents and blocks reused clusters. A separate deep scan searches six contiguous file formats on readable devices and labels deletion status as unknown. Windows can open a UAC-authorized recovery-only window; cleanup is disabled in that process. Existing cleaner, previews, selection and reviewed cleanup remain available in the normal app.

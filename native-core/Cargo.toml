@@ -1,8 +1,8 @@
 [package]
 name = "sift-core"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
-description = "Local storage analysis, reviewed cleanup, and read-only disk-image carving for Sift"
+description = "Local storage analysis, reviewed cleanup, and read-only storage recovery for Sift"
 license = "MIT"
 
 [dependencies]

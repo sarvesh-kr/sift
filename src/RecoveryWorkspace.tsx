@@ -252,6 +252,11 @@ export function RecoveryWorkspace({
     if (active) void refreshDrives().catch(() => {});
   }, [active]);
   const [report, setReport] = useState<RecoveryReport | null>(null);
+  const resultsRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (report && active)
+      resultsRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [report]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -398,9 +403,7 @@ export function RecoveryWorkspace({
           </button>
           <span className="recovery-wordmark">
             sift<span>.</span>{" "}
-            <small>
-              {recoveryOnly ? "ADMIN · RECOVERY ONLY" : "RECOVER DATA"}
-            </small>
+            <small>{recoveryOnly ? "RECOVERY ONLY" : "RECOVER DATA"}</small>
           </span>
           <button
             className="icon-button"
@@ -506,19 +509,20 @@ export function RecoveryWorkspace({
                     {deep ? "Deep scan storage" : "Scan deleted files"}{" "}
                     <FileSearch size={15} />
                   </button>
-                  {capabilities.canElevate && !capabilities.recoveryOnly && (
-                    <button
-                      className="text-button"
-                      disabled={busy}
-                      onClick={() =>
-                        void invoke("enable_recovery_drive_access").catch((e) =>
-                          setNotice(String(e)),
-                        )
-                      }
-                    >
-                      Enable drive access (Windows administrator)
-                    </button>
-                  )}
+                  {capabilities.canElevate &&
+                    !(capabilities.recoveryOnly || recoveryOnly) && (
+                      <button
+                        className="text-button"
+                        disabled={busy}
+                        onClick={() =>
+                          void invoke("enable_recovery_drive_access").catch(
+                            (e) => setNotice(String(e)),
+                          )
+                        }
+                      >
+                        Enable drive access (Windows administrator)
+                      </button>
+                    )}
                   <small>
                     {capabilities.canElevate
                       ? "Administrator consent opens a recovery-only window. Cleanup is disabled there."
@@ -533,40 +537,42 @@ export function RecoveryWorkspace({
                 </p>
               )}
             </section>
-            <section className="recovery-path image-path">
-              <span className="recovery-step">
-                ADVANCED / WORK FROM AN IMAGE
-              </span>
-              <Database size={24} />
-              <h2>Scan NTFS filesystem records.</h2>
-              <p>
-                Choose a local raw NTFS volume or disk image (.img, .dd, .raw).
-                Recover deleted files of any type when their records and data
-                runs survive.
-              </p>
-              <button
-                className="button primary"
-                onClick={() => void scan()}
-                disabled={busy}
-              >
-                {busy ? (
-                  <LoaderCircle className="spin" size={16} />
-                ) : (
-                  <FileSearch size={16} />
-                )}{" "}
-                {report ? "Scan another image" : "Choose disk image"}
-              </button>
-            </section>
+            <details className="recovery-advanced">
+              <summary>Advanced: disk-image tools</summary>
+              <section className="recovery-path image-path">
+                <span className="recovery-step">
+                  ADVANCED / WORK FROM AN IMAGE
+                </span>
+                <Database size={24} />
+                <h2>Scan NTFS filesystem records.</h2>
+                <p>
+                  Choose a local raw NTFS volume or disk image (.img, .dd,
+                  .raw). Recover deleted files of any type when their records
+                  and data runs survive.
+                </p>
+                <button
+                  className="button primary"
+                  onClick={() => void scan()}
+                  disabled={busy}
+                >
+                  {busy ? (
+                    <LoaderCircle className="spin" size={16} />
+                  ) : (
+                    <FileSearch size={16} />
+                  )}{" "}
+                  {report ? "Scan another image" : "Choose disk image"}
+                </button>
+              </section>
+            </details>
           </div>
           <div className="recovery-context">
             <ShieldCheck size={19} />
             <p>
               <strong>Recovery starts with preserving what’s left.</strong> Stop
-              writing to the affected drive. Work from an image made with a
-              disk-imaging tool and save recovered files to another physical
-              drive. Sift opens sources read-only. An active drive can still
-              change through Windows or other apps; a stable image is safer.
-              Sift does not create disk images.
+              writing to the affected drive and save recovered files to another
+              physical device. Sift opens sources read-only. An active drive can
+              still change through Windows or other apps; a stable image is
+              safer. Sift does not create disk images.
             </p>
           </div>
           {busy && (
@@ -653,11 +659,12 @@ export function RecoveryWorkspace({
           {report ? (
             <section
               className="recovery-results"
+              ref={resultsRef}
               aria-label="Recovery candidates"
             >
               <div className="recovery-results-heading">
                 <div>
-                  <div className="eyebrow">WHAT THE IMAGE CONTAINS</div>
+                  <div className="eyebrow">FILES FOUND ON THIS SOURCE</div>
                   <h2>
                     {report.files.length.toLocaleString()} candidate files
                   </h2>
@@ -668,7 +675,7 @@ export function RecoveryWorkspace({
                   disabled={busy}
                   onClick={() => void closeImage()}
                 >
-                  Close image
+                  Close source
                 </button>
                 <span className="badge">
                   {report.cancelled
