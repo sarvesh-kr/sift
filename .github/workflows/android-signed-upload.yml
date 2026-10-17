@@ -1,0 +1,45 @@
+name: Android signed upload
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful Android build and device-test run
+        required: true
+        type: string
+      source_commit:
+        description: Full source commit of that run
+        required: true
+        type: string
+      apk_blob:
+        description: Git blob SHA of public signed APK bytes (never a signing key)
+        required: true
+        type: string
+      metadata_blob:
+        description: Git blob SHA of public signed APK build record
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  attach-verified-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'build-tools;35.0.0'
+      - name: Verify signed contents and attach to draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          APK_BLOB: ${{ inputs.apk_blob }}
+          METADATA_BLOB: ${{ inputs.metadata_blob }}
+        run: python3 scripts/publish-signed-android.py
