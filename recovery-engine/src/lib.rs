@@ -387,6 +387,7 @@ impl Undelete {
                 recoverable: false,
                 evidence: String::new(),
             };
+            let mut shortened_initialized_length = false;
             let outcome: Result<Plan> =
                 (|| {
                     let item = file
@@ -417,18 +418,17 @@ impl Undelete {
                             plan.resident = Some(value.data().to_vec())
                         }
                         NtfsAttributeValue::NonResident(value) => {
-                            // Initialized length must cover the entire logical file; never emit stale tail bytes.
+                            // Windows can clear initialized length on deletion while
+                            // original-size runs and contents still survive. Reading
+                            // those unallocated stale bytes is the purpose of undelete;
+                            // never describe them as guaranteed intact original data.
                             let attribute_offset = attribute
                                 .position()
                                 .value()
                                 .ok_or("Missing attribute position")?
                                 .get();
                             let header = bytes(&mut fs, attribute_offset, 64)?;
-                            if le64(&header[56..64]) < candidate.size {
-                                return Err(
-                                    "Partially initialized NTFS stream is not supported.".into()
-                                );
-                            }
+                            shortened_initialized_length = le64(&header[56..64]) < candidate.size;
                             let mut covered = 0u64;
                             for run in value.data_runs() {
                                 if plan.runs.len() >= MAX_RUNS {
@@ -465,6 +465,9 @@ impl Undelete {
                     } else {
                         format!("Deleted NTFS record · {} data runs · all referenced clusters currently unallocated",plan.runs.len())
                     };
+                    if shortened_initialized_length {
+                        candidate.evidence.push_str(" · initialized length is shorter/cleared; original valid length is unknown");
+                    }
                     result.plans.insert(id, plan);
                 }
                 Err(reason) => candidate.evidence = reason,

@@ -52,7 +52,15 @@ type RecoveryReport = {
   elapsedMs: number;
   method: string;
 };
-type Progress = { bytes: number; total: number; found: number; phase: string };
+type Progress = {
+  bytes: number;
+  total: number;
+  found: number;
+  phase: string;
+  unit?: string;
+};
+const progressAmount = (value: number, unit?: string) =>
+  unit === "records" ? `${value.toLocaleString()} records` : bytes(value);
 type ExportResult = {
   directory: string;
   exported: { candidate: RecoveryFile; path: string }[];
@@ -211,9 +219,11 @@ function Dialog({
 export function RecoveryWorkspace({
   active,
   onHome,
+  recoveryOnly = false,
 }: {
   active: boolean;
   onHome: () => void;
+  recoveryOnly?: boolean;
 }) {
   const [capabilities, setCapabilities] = useState<{
     driveAccess: boolean;
@@ -223,17 +233,24 @@ export function RecoveryWorkspace({
   }>({ driveAccess: false, recoveryOnly: false, drives: [] });
   const [drive, setDrive] = useState("");
   const [deep, setDeep] = useState(false);
+  async function refreshDrives() {
+    if (!native) return;
+    const value = await invoke<typeof capabilities>("recovery_capabilities");
+    if (value) {
+      setCapabilities(value);
+      setDrive((current) => {
+        const next = value.drives.some((d) => d.id === current)
+          ? current
+          : value.drives[0]?.id || "";
+        const fs = value.drives.find((d) => d.id === next)?.filesystem;
+        if (!current && fs) setDeep(!fs.toLowerCase().includes("ntfs"));
+        return next;
+      });
+    }
+  }
   useEffect(() => {
-    if (native)
-      void invoke<typeof capabilities>("recovery_capabilities")
-        .then((value) => {
-          if (value) {
-            setCapabilities(value);
-            setDrive(value.drives[0]?.id || "");
-          }
-        })
-        .catch(() => {});
-  }, []);
+    if (active) void refreshDrives().catch(() => {});
+  }, [active]);
   const [report, setReport] = useState<RecoveryReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -371,12 +388,19 @@ export function RecoveryWorkspace({
     >
       <div className="recovery-shell">
         <header className="recovery-topbar">
-          <button className="text-button" onClick={onHome} disabled={busy}>
+          <button
+            className="text-button"
+            onClick={onHome}
+            disabled={busy || recoveryOnly}
+          >
             <ArrowLeft size={16} />
             Switch workspace
           </button>
           <span className="recovery-wordmark">
-            sift<span>.</span> <small>RECOVER DATA</small>
+            sift<span>.</span>{" "}
+            <small>
+              {recoveryOnly ? "ADMIN · RECOVERY ONLY" : "RECOVER DATA"}
+            </small>
           </span>
           <button
             className="icon-button"
@@ -448,6 +472,15 @@ export function RecoveryWorkspace({
                       ))}
                     </select>
                   </label>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      void refreshDrives().catch((e) => setNotice(String(e)))
+                    }
+                  >
+                    Refresh storage devices
+                  </button>
                   <label className="recovery-category">
                     Scan method{" "}
                     <select
@@ -559,7 +592,8 @@ export function RecoveryWorkspace({
                 max={Math.max(1, progress?.total || 1)}
               />
               <p>
-                {bytes(progress?.bytes || 0)} / {bytes(progress?.total || 0)} ·{" "}
+                {progressAmount(progress?.bytes || 0, progress?.unit)} /{" "}
+                {progressAmount(progress?.total || 0, progress?.unit)} ·{" "}
                 {progress?.found || 0} files
               </p>
             </section>
@@ -888,7 +922,8 @@ export function RecoveryWorkspace({
             {busy && (
               <p role="status">
                 {progress?.phase || "Choose a destination"} ·{" "}
-                {bytes(progress?.bytes || 0)} / {bytes(progress?.total || 0)} ·{" "}
+                {progressAmount(progress?.bytes || 0, progress?.unit)} /{" "}
+                {progressAmount(progress?.total || 0, progress?.unit)} ·{" "}
                 {progress?.found || 0} copies
               </p>
             )}

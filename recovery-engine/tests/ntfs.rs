@@ -90,6 +90,45 @@ fn reused_clusters_are_blocked_both_at_scan_and_before_copy() {
     );
 }
 #[test]
+fn windows_style_cleared_initialized_length_retains_raw_recovery_with_explicit_evidence() {
+    use ntfs::Ntfs;
+    let image = fixture();
+    let source = File::open(image.path()).unwrap();
+    let cancel = AtomicBool::new(false);
+    let mut reader = &source;
+    let ntfs = Ntfs::new(&mut reader).unwrap();
+    let inode = ntfs.file(&mut reader, 66).unwrap();
+    let item = inode.data(&mut reader, "").unwrap().unwrap();
+    let attr = item.to_attribute().unwrap();
+    let position = attr.position().value().unwrap().get();
+    let mut writer = std::fs::OpenOptions::new()
+        .write(true)
+        .open(image.path())
+        .unwrap();
+    writer.seek(SeekFrom::Start(position + 56)).unwrap();
+    writer.write_all(&0u64.to_le_bytes()).unwrap();
+    writer.sync_all().unwrap();
+    let engine = Undelete::scan(
+        &source,
+        source.metadata().unwrap().len(),
+        &cancel,
+        |_, _, _| {},
+    )
+    .unwrap();
+    let file = engine
+        .scan
+        .files
+        .iter()
+        .find(|f| f.name == "fragmented.bin")
+        .unwrap();
+    assert!(file.recoverable);
+    assert!(file.evidence.contains("original valid length is unknown"));
+    let mut bytes = vec![0; file.size as usize];
+    engine.read(&source, &file.id, 0, &mut bytes).unwrap();
+    let block: Vec<u8> = (0..4096).map(|i| ((i * 17 + 31) % 251) as u8).collect();
+    assert_eq!(bytes, block.repeat(12));
+}
+#[test]
 fn reused_file_records_and_changed_boot_sectors_are_rejected() {
     let image = fixture();
     let cancel = AtomicBool::new(false);

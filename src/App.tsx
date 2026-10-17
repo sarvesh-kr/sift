@@ -26,11 +26,11 @@ export default function App() {
   const [mode, setMode] = useState<'home' | 'clean' | 'recover'>('home');
   const [visited, setVisited] = useState({clean: false, recover: false});
   const [recoveryOnly,setRecoveryOnly]=useState(false);
-  useEffect(()=>{if(native) void invoke<{recoveryOnly:boolean}>('recovery_capabilities').then(c=>{if(c?.recoveryOnly){setRecoveryOnly(true);setVisited({clean:false,recover:true});setMode('recover');}}).catch(()=>{});},[]);
+  useEffect(()=>{if(native) void invoke<boolean>('recovery_launch_mode').then(c=>{if(c){setRecoveryOnly(true);setVisited({clean:false,recover:true});setMode('recover');}}).catch(()=>{});},[]);
   function open(next: 'clean' | 'recover') { setVisited(current => ({...current, [next]: true})); setMode(next); }
   return <>{mode === 'home' && !recoveryOnly && <ModeHome onSelect={open}/>}
     {visited.clean && <div hidden={mode !== 'clean'}><CleanWorkspace active={mode === 'clean'} onHome={() => setMode('home')}/></div>}
-    {visited.recover && <div hidden={mode !== 'recover'}><RecoveryWorkspace active={mode === 'recover'} onHome={() => {if(!recoveryOnly)setMode('home');}}/></div>}
+    {visited.recover && <div hidden={mode !== 'recover'}><RecoveryWorkspace recoveryOnly={recoveryOnly} active={mode === 'recover'} onHome={() => {if(!recoveryOnly)setMode('home');}}/></div>}
   </>;
 }
 function CleanWorkspace({active, onHome}: {active: boolean; onHome: () => void}) {

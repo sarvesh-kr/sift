@@ -66,6 +66,7 @@ pub struct RecoveryProgress {
     pub total: u64,
     pub found: usize,
     pub phase: &'static str,
+    pub unit: &'static str,
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -292,6 +293,7 @@ impl RecoverySession {
                     total,
                     found,
                     phase: "Reading NTFS deleted file records",
+                    unit: "records",
                 });
             },
         )?;
@@ -431,6 +433,7 @@ impl RecoverySession {
                 total: self.size,
                 found: self.report.files.len(),
                 phase: "Reading image · source unchanged",
+                unit: "bytes",
             });
         }
         self.unchanged()?;
@@ -634,6 +637,7 @@ impl RecoverySession {
                         total,
                         found: result.exported.len(),
                         phase: "Copying and verifying recovered files",
+                        unit: "bytes",
                     });
                 }
                 file.sync_all().map_err(error)?;

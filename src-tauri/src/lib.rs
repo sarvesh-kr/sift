@@ -386,9 +386,15 @@ fn recovery_only() -> bool {
 }
 
 #[tauri::command]
-fn recovery_capabilities() -> serde_json::Value {
+fn recovery_launch_mode() -> bool {
+    recovery_only()
+}
+#[tauri::command]
+async fn recovery_capabilities() -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(|| {
     let drives = serde_json::to_value(sift_core::recovery::drives()).unwrap_or_default();
     serde_json::json!({"driveAccess":true,"canElevate":cfg!(windows),"recoveryOnly":recovery_only(),"drives":drives})
+    }).await.map_err(|e|e.to_string())
 }
 #[tauri::command]
 async fn scan_recovery_drive(
@@ -495,6 +501,7 @@ pub fn run() {
             close_recovery_image,
             export_recovery_files,
             recovery_capabilities,
+            recovery_launch_mode,
             scan_recovery_drive,
             enable_recovery_drive_access
         ])

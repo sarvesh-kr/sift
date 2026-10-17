@@ -22,6 +22,12 @@ try {
     for ($i=0; $i -lt $payload.Length; $i++) { $payload[$i]=($i*17+31)%251 }
     [IO.File]::WriteAllBytes((Join-Path $folder 'sift-deleted-payload.bin'),$payload)
     [IO.File]::WriteAllText((Join-Path $folder 'sift-live-keep.txt'),'This file must not appear as deleted.')
+    # Persist known original bytes before deleting. Otherwise an immediately deleted
+    # dirty cache page may never have reached this raw test volume at all.
+    foreach ($name in @('sift-permanently-deleted.txt','sift-deleted-payload.bin')) {
+        $handle = [IO.File]::Open((Join-Path $folder $name),[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::Read)
+        try { $handle.Flush($true) } finally { $handle.Dispose() }
+    }
     # DeleteFile bypasses Recycle Bin. The disposable VHD has no TRIM-backed SSD.
     [IO.File]::Delete((Join-Path $folder 'sift-permanently-deleted.txt'))
     [IO.File]::Delete((Join-Path $folder 'sift-deleted-payload.bin'))

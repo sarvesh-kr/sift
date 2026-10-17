@@ -38,6 +38,7 @@ async function mockedRecovery(page: import("@playwright/test").Page) {
         unregisterCallback: () => {},
         invoke: async (command: string, args?: { ids: string[]; deep?:boolean }) => {
           calls.push({ command, args });
+          if(command==="recovery_launch_mode")return false;
           if(command==="recovery_capabilities") return {driveAccess:true,canElevate:true,recoveryOnly:false,drives:[{id:"D",label:"D: NTFS",filesystem:"NTFS"},{id:"E",label:"E: USB exFAT",filesystem:"exFAT"}]};
           if (command === "plugin:event|listen") return 1;
           if (
