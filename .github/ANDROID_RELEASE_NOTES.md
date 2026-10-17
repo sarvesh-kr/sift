@@ -1,3 +1,15 @@
+**0.2.0: List / Grid views with local content previews.** Recognize images,
+video frames, PDF first pages, and plain-text/source files in Files, categories,
+large files, duplicate matches, Sift trash, and cleanup/restore review. Open file
+details for a larger preview. Layout preference persists and switching views
+retains selection. Unsupported codecs/types, protected PDFs, oversized images,
+and corrupt files show a file-type fallback. Previews are lazy, capped at 384 px,
+with three IO decoders and a 24 MB private memory cache. Text/HTML stays inert.
+
+**Updating from 0.1.0:** install this APK over the existing app. It uses the same
+Sift signing key and version code 2. Do not uninstall to update: uninstalling
+removes Sift trash.
+
 Sift for Android — native Kotlin and Jetpack Compose preview, Android 11 or newer.
 
 - Scan accessible shared phone storage, browse categories, search, find large files, and select individual files or all filtered matches.

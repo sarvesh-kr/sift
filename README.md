@@ -14,7 +14,7 @@
 | Linux x64 | `linux-x64.deb` or `linux-x64.AppImage` |
 | Apple Silicon Mac (M1 or newer) | `macos-apple-silicon.dmg` |
 | Intel Mac | `macos-intel.dmg` |
-| Android 11+ phone | Signed `Sift-0.1.0-android.apk` |
+| Android 11+ phone | Signed `Sift-0.2.0-android.apk` |
 
 Installers and archives are attached to tagged preview releases after every platform build passes. The desktop initial workspace uses labeled sample data; click **Scan a folder** to index your own files.
 
@@ -23,6 +23,17 @@ Installers and archives are attached to tagged preview releases after every plat
 Version **0.2.0** adds an explanation-based Cleanup Center, folder drill-down, volume capacity and available-space readings, staged duplicate comparison with separate byte verification, and retained-copy protection. See [the competitive goals and benchmark gates](PRODUCT-GOALS.md) for the path toward a leading storage-cleanup product. No superiority over commercial cleaners has been established.
 
 Version **0.3.0** adds three explicit cleanup actions: Recycle Bin / trash (default), permanent deletion, and best-effort overwrite-and-delete. Apply them to one file, a selection, or all matches in the current filtered view, including unloaded rows. Permanent actions require typing the exact action and file count; removing all known duplicate copies also requires a separate acknowledgment. Windows recycling retains the isolated STA Shell worker, per-file errors, and verified bin destination from 0.2.1. Recycling never falls back to permanent deletion.
+
+Version **0.4.0** on desktop and **0.2.0** on Android add saved **List / Grid**
+views and local content previews across file browsing and cleanup review. Switching
+views preserves filters and selections. File details provide a larger preview.
+Images and plain text work on desktop; Windows additionally uses available system
+thumbnail handlers for video, PDF, Office, and newer image formats. Android
+supports images, video frames, PDF first pages, and plain text, including Sift
+trash. Unsupported, protected, oversized, or unreadable files show their type.
+Previews load on demand with bounded memory and decode concurrency. They do not
+execute files, fetch remote resources, or change cleanup safety checks. Thumbnails
+are a visual aid; inspect paths and retain backups before deletion.
 
 ## What works on desktop
 

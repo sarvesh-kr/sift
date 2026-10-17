@@ -204,6 +204,33 @@ async fn cleanup_files(
 }
 
 #[tauri::command]
+async fn file_preview(
+    path: String,
+    session: State<'_, Arc<Session>>,
+) -> Result<Option<sift_core::FilePreview>, String> {
+    // Bound native decoders independently of the webview's lazy-loading queue.
+    static SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+    let permit = SLOTS.acquire().await.map_err(|e| e.to_string())?;
+    let (root, entry) = {
+        let locked = session.report.lock().map_err(|e| e.to_string())?;
+        let report = locked.as_ref().ok_or("Scan a folder first.")?;
+        let entry = report
+            .files
+            .iter()
+            .find(|entry| entry.path == path)
+            .cloned()
+            .ok_or("File is no longer in this scan.")?;
+        (PathBuf::from(&report.root), entry)
+    };
+    let result =
+        tauri::async_runtime::spawn_blocking(move || sift_core::file_preview(&root, &entry))
+            .await
+            .map_err(|e| e.to_string())?;
+    drop(permit);
+    result
+}
+
+#[tauri::command]
 async fn export_report(
     app: tauri::AppHandle,
     session: State<'_, Arc<Session>>,
@@ -249,7 +276,8 @@ pub fn run() {
             find_duplicates,
             trash_files,
             cleanup_files,
-            export_report
+            export_report,
+            file_preview
         ])
         .run(tauri::generate_context!())
         .expect("Could not start Sift");

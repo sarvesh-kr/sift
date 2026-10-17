@@ -44,6 +44,25 @@ Official platform documentation:
 - https://developer.android.com/training/data-storage/shared/documents-files
 - https://developer.android.com/reference/android/provider/MediaStore#createTrashRequest(android.content.ContentResolver,java.util.Collection%3Candroid.net.Uri%3E,boolean)
 
+## Visual browsing
+
+Android 0.2.0 saves the chosen List / Grid layout and retains selection and filters
+when switching. The Files page (including categories, large files, and duplicates),
+Sift trash, cleanup/restore review, and file details show local previews. Images
+use sampled decoding with orientation, videos use Android's thumbnail decoder,
+and PDFs show the first page. Text/source snippets are rendered as inert text.
+Unavailable formats, corrupt content, password-protected PDFs, and unsupported
+codecs fall back to a file-type illustration. Support depends on Android's codecs.
+
+Previews are generated for composed visible/prefetched items on IO workers, with
+three concurrent decodes and a 24 MB memory cache. No thumbnails are written to
+shared storage or uploaded. Image/PDF input is capped at 64 MB, output at 384 px,
+and text reads at 4 KB. Scanning remains metadata-only. Trash previews use the
+validated private stored file while displaying its original name and path.
+
+Install updates over the existing app using the same signing key. **Do not
+uninstall to update** if you need to preserve Sift trash.
+
 ## Build and validate
 
 Install JDK 17, Android SDK platform 36 and build-tools 35.0.0. The Gradle 8.13

@@ -1,3 +1,5 @@
+mod preview;
+pub use preview::{file_preview, FilePreview};
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},

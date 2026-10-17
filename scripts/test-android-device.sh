@@ -16,6 +16,7 @@ adb exec-out screencap -p > "android-device-results/onboarding-api-$1.png"
 adb shell am force-stop si.sarvesh.sift
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE allow
 adb shell am instrument -w -r si.sarvesh.sift.test/androidx.test.runner.AndroidJUnitRunner > android-device-results/instrumentation.txt
+adb pull /sdcard/Android/data/si.sarvesh.sift/cache/sift-grid.png "android-device-results/grid-api-$1.png" || true
 cat android-device-results/instrumentation.txt
 python3 - <<'PY'
 from pathlib import Path

@@ -1,3 +1,18 @@
+**0.4.0: recognize your files before cleaning up.** Choose List or Grid, with
+local image thumbnails and plain-text/source previews. Windows can additionally
+use its available thumbnail handlers for video, PDF, Office, and newer image
+formats. File details show a larger preview. Views are available in file lists,
+folder browsing, duplicate-copy comparison, and cleanup review. Your saved layout,
+filters, selections, and all explicit cleanup confirmations are retained.
+
+Previews are read-only, lazy, memory/concurrency bounded, and restricted to the
+current scan. They never launch a file or render HTML. Changed, cloud-placeholder,
+oversized, corrupt, or unsupported files show a file-type fallback. Windows codec
+and document-handler availability varies. Image support on Mac/Linux includes
+JPEG, PNG, WebP, GIF (first frame), BMP, and ICO; video/PDF/Office previews are not
+bundled there. Text reads are capped at 4 KB. Thumbnail creation reads contents
+only when browsing; scanning remains metadata-only.
+
 Sift is a local desktop storage explorer and cleanup assistant. This preview includes an explanation-based Cleanup Center, folder drill-down, exact duplicate comparison, retained-copy protection, and explicit cleanup actions.
 
 **0.3.0 cleanup actions:** choose Recycle Bin / trash (default), permanent deletion, or best-effort overwrite-and-delete for one file, multiple files, or all matches in a filtered view. Permanent actions require an exact typed action and file count. Removing every known duplicate copy requires an additional explicit acknowledgment.

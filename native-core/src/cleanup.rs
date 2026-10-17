@@ -182,7 +182,7 @@ fn open_verified(path: &Path, entry: &FileEntry, writable: bool) -> Result<File,
 }
 
 #[cfg(unix)]
-fn handle_identity(file: &File) -> Result<(String, u64), String> {
+pub(crate) fn handle_identity(file: &File) -> Result<(String, u64), String> {
     use std::os::unix::fs::MetadataExt;
     let m = file.metadata().map_err(|error| error.to_string())?;
     Ok((
@@ -192,7 +192,7 @@ fn handle_identity(file: &File) -> Result<(String, u64), String> {
 }
 
 #[cfg(windows)]
-fn handle_identity(file: &File) -> Result<(String, u64), String> {
+pub(crate) fn handle_identity(file: &File) -> Result<(String, u64), String> {
     use std::{mem::size_of, os::windows::io::AsRawHandle};
     use windows::Win32::{Foundation::HANDLE, Storage::FileSystem::*};
     let handle = HANDLE(file.as_raw_handle());
