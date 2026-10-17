@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.animateContentSize
@@ -51,7 +52,8 @@ fun sizeLabel(bytes: Long): String {
 class MainActivity : ComponentActivity() {
     private val model: SiftViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState); enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge(statusBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT), navigationBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT))
         setContent {
             val state by model.state.collectAsStateWithLifecycle()
             SiftTheme { SiftScreen(state, model, ::requestStorage) }
@@ -177,8 +179,8 @@ class MainActivity : ComponentActivity() {
         Label("PHONE STORAGE")
         Row(Modifier.padding(vertical=22.dp),verticalAlignment=Alignment.CenterVertically) {
             val fraction=if(state.total>0)(state.total-state.available).toFloat()/state.total else 0f
-            Canvas(Modifier.size(106.dp)) { val stroke=Stroke(12.dp.toPx(),cap=StrokeCap.Round); drawArc(Color(0xFFEDF2E8),0f,360f,false,style=stroke); drawArc(Forest,-90f,360f*fraction.coerceIn(0f,1f),false,style=stroke) }
-            Column(Modifier.padding(start=26.dp)) { Text(sizeLabel(state.available),fontSize=29.sp,fontWeight=FontWeight.SemiBold,letterSpacing=(-1).sp); Note("available of ${sizeLabel(state.total)}"); Spacer(Modifier.height(8.dp)); Text("${sizeLabel(state.inventory.files.sumOf{it.size})} indexed",fontSize=12.sp,color=Forest) }
+            Canvas(Modifier.size(90.dp)) { val stroke=Stroke(12.dp.toPx(),cap=StrokeCap.Round); drawArc(Color(0xFFEDF2E8),0f,360f,false,style=stroke); drawArc(Forest,-90f,360f*fraction.coerceIn(0f,1f),false,style=stroke) }
+            Column(Modifier.weight(1f).padding(start=20.dp)) { Text(sizeLabel(state.available),fontSize=29.sp,fontWeight=FontWeight.SemiBold,letterSpacing=(-1).sp); Note("available of ${sizeLabel(state.total)}"); Spacer(Modifier.height(8.dp)); Text("${sizeLabel(state.inventory.files.sumOf{it.size})} indexed",fontSize=12.sp,color=Forest) }
         }
         Note("Volume capacity includes space used by Android and apps. Sift indexes accessible shared files only.")
     } }

@@ -24,6 +24,15 @@ metadata = {'version':version,'versionCode':code,'minimumAndroid':'11 (API 30)',
             'commit':os.environ.get('GITHUB_SHA') or subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),
             'signed':signed,'universal':True,'networkPermission':False,
             'workflowRun':f"https://github.com/{os.environ.get('GITHUB_REPOSITORY','sarvesh-kr/sift')}/actions/runs/{os.environ.get('GITHUB_RUN_ID','')}"}
+if signed:
+    sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
+    if not sdk: raise SystemExit('ANDROID_HOME required to verify the signed APK')
+    result = subprocess.check_output([str(Path(sdk)/'build-tools/35.0.0/apksigner'),'verify','--print-certs',str(output/name)],text=True)
+    match = re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]+)',result)
+    if not match: raise SystemExit('APK signing certificate not verified')
+    metadata['signingCertificateSha256'] = match[1].lower()
+if os.environ.get('GITHUB_OUTPUT'):
+    with open(os.environ['GITHUB_OUTPUT'],'a') as handle: handle.write(f'signed={str(signed).lower()}\n')
 (output/f'Sift-{version}-android-build-info.json').write_text(json.dumps(metadata,indent=2)+'\n')
 files=sorted(p for p in output.iterdir() if p.name!='SHA256SUMS-android.txt')
 (output/'SHA256SUMS-android.txt').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in files))
