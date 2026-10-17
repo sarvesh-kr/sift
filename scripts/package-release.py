@@ -34,7 +34,7 @@ if "windows" in args.target:
         raise SystemExit("Missing standalone Windows executable")
     with zipfile.ZipFile(output / f"{prefix}-portable.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         archive.write(executable, "Sift/Sift.exe")
-        archive.writestr("Sift/START-HERE.txt", f"Sift {version}\n\nRun Sift.exe. Requires Microsoft Edge WebView2; use the setup installer if it is missing.\nThe initial workspace is labeled sample data. Click Scan a folder for real files.\nCleanup requires selection and review and uses the system trash.\n\nThis is an unsigned preview. See VALIDATION.md and the repository README for limits.\n")
+        archive.writestr("Sift/START-HERE.txt", f"Sift {version}\n\nRun Sift.exe. Requires Microsoft Edge WebView2; use the setup installer if it is missing.\nThe initial workspace is labeled sample data. Click Scan a folder for real files.\nReview the selected files, then choose Recycle Bin / trash (default), permanent deletion, or best-effort overwrite-and-delete. Permanent actions require typed confirmation. Overwrite is not certified erasure of SSDs, snapshots, or backups.\n\nThis is an unsigned preview. See VALIDATION.md and the repository README for limits.\n")
         for name in ["LICENSE", "THIRD_PARTY_NOTICES.txt", "VALIDATION.md", "PRODUCT-GOALS.md"]:
             archive.write(root / name, f"Sift/{name}")
 
