@@ -27,8 +27,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  refresh-from-main:
+    # The Pages environment permits main. A release event runs in tag context,
+    # so request the same tested workflow on main without relaxing that policy.
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Refresh release links from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+
   build:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    if: github.event_name != 'release' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
