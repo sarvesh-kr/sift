@@ -62,7 +62,9 @@ No superiority over professional recovery tools or universal recovery is claimed
   SHA-256. In-memory image previews are lazy and bounded; non-image candidates
   show their type. Previews never render HTML, decompress archives, or execute data.
 - Select a destination explicitly. Sift creates a new unique recovery folder
-  with category subfolders. It never reconstructs unknown original paths.
+  with category subfolders. Android declares the corresponding image/document/
+  archive/audio MIME type so providers can retain usable file extensions. It never
+  reconstructs unknown original paths.
 - Each copy is compared with the SHA-256 recorded during the scan, flushed, and
   read back. A copy is reported successful only after verification. This verifies
   copied bytes, not whether the recovered document is meaningful or will open.

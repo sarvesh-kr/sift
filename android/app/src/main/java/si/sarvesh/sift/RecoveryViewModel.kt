@@ -290,12 +290,8 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                         ) ?: error("Could not create category folder.")
                     }
                 val created =
-                    DocumentsContract.createDocument(
-                        resolver,
-                        folder,
-                        "application/octet-stream",
-                        file.name,
-                    ) ?: error("Could not create destination file.")
+                    DocumentsContract.createDocument(resolver, folder, file.mimeType, file.name)
+                        ?: error("Could not create destination file.")
                 require(created != source.uri && created != directory && created != folder) {
                     "Invalid destination document."
                 }

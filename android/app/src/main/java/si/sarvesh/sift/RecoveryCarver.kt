@@ -16,7 +16,19 @@ internal data class RecoveryFile(
     val size: Long,
     val evidence: String,
     val sha256: String,
-)
+) {
+    val mimeType: String
+        get() =
+            when (format) {
+                "png" -> "image/png"
+                "jpg" -> "image/jpeg"
+                "webp" -> "image/webp"
+                "pdf" -> "application/pdf"
+                "zip" -> "application/zip"
+                "wav" -> "audio/x-wav"
+                else -> "application/octet-stream"
+            }
+}
 
 internal data class RecoveryReport(
     val source: String,

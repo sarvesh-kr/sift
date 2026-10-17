@@ -13,6 +13,12 @@ fi
 adb install "$RUNNER_TEMP/smoke.apk"
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE deny
 adb shell am start -n si.sarvesh.sift/.MainActivity
+python scripts/check-android-screen.py 'Clean data' --exact
+adb exec-out screencap -p > android-release-results/workspaces.png
+python scripts/check-android-screen.py 'Recover data' --tap --exact
+python scripts/check-android-screen.py 'Some things deserve'
+adb exec-out screencap -p > android-release-results/recovery-home.png
+python scripts/check-android-screen.py 'Switch workspace' --description --tap --exact
 python scripts/check-android-screen.py 'Clean data' --tap --exact
 python scripts/check-android-screen.py 'Allow shared storage access'
 adb exec-out screencap -p > android-release-results/onboarding.png

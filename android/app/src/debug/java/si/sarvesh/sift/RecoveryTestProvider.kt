@@ -165,6 +165,21 @@ class RecoveryTestProvider : DocumentsProvider() {
                 !displayName.contains('\\') &&
                 displayName != ".."
         )
+        if (displayName.startsWith("recovered-")) {
+            val expected =
+                when (displayName.substringAfterLast('.')) {
+                    "png" -> "image/png"
+                    "jpg" -> "image/jpeg"
+                    "webp" -> "image/webp"
+                    "pdf" -> "application/pdf"
+                    "zip" -> "application/zip"
+                    "wav" -> "audio/x-wav"
+                    else -> "application/octet-stream"
+                }
+            require(mimeType == expected) {
+                "Recovered documents must have their format MIME type."
+            }
+        }
         if (aliasSource && displayName.startsWith("recovered-")) return "sample.img"
         val parent = file(parentDocumentId)
         require(parent.isDirectory)

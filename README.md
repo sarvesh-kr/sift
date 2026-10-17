@@ -18,7 +18,7 @@
 
 Installers and archives are attached to tagged preview releases after every platform build passes. Choose **Clean data** or **Recover data** at launch. The cleaning workspace starts with labeled sample data; click **Scan a folder** to index your own files.
 
-![Sift Cleanup Center](artifacts/sift-cleanup-center.png)
+![Sift desktop interface with Clean data and Recover data workspace choices](artifacts/sift-workspaces.png)
 
 Version **0.2.0** adds an explanation-based Cleanup Center, folder drill-down, volume capacity and available-space readings, staged duplicate comparison with separate byte verification, and retained-copy protection. See [the competitive goals and benchmark gates](PRODUCT-GOALS.md) for the path toward a leading storage-cleanup product. No superiority over commercial cleaners has been established.
 
