@@ -16,8 +16,8 @@ source commit. See GitHub Actions for the recorded outcome on each runner.
 - **18 frontend checks:** storage analysis and review flows, keyboard focus,
   responsive layout, and mocked native partial/zero-success cleanup. These verify
   that per-file errors persist, successful files are excluded from a retry, typed confirmations reset with selection changes, single-file and filtered all-match selection work, and incomplete overwrites block cleanup until rescanning.
-- **Four website checks:** release links, Mac architecture selection, previews,
-  narrow layouts, and download operation without JavaScript.
+- **Five website checks:** release links, Mac architecture selection, previews,
+  narrow layouts, Android APK recommendations and install instructions, and download operation without JavaScript.
 - TypeScript, Vite, Rust formatting, and Windows-target compilation checks.
 - Native installer builds for Windows x64, Linux x64, and both Mac architectures.
 
@@ -34,7 +34,7 @@ See README.md for reproduction steps and PRODUCT-GOALS.md for benchmark gates.
 ## Android 0.1.0 release gates
 
 - Release APK compilation and resource/code shrinking, Android lint, and four
-  model regressions for extension categorization, exact typed confirmations, and
+  model regressions for extension categorization, exact typed confirmations,
   duplicate singleton cleanup, and file-identity alias exclusion.
 - Eleven instrumented checks on Android 11/API 30 and Android 16/API 36 emulators:
   protected-folder and symlink exclusion, changed-file rejection, exact
@@ -44,6 +44,12 @@ See README.md for reproduction steps and PRODUCT-GOALS.md for benchmark gates.
   app-owned trash, and native Compose navigation.
 - First-launch onboarding is checked without storage access before granting the
   permission only to the isolated emulator test app.
+- The optimized release APK is exercised through its native screens: scan,
+  search, file details, cleanup review, trash, full emulator reboot, and restore.
+  The restored fixture is checked against its exact original contents.
+  [Android build and device tests](https://github.com/sarvesh-kr/sift/actions/runs/39011631651)
+  and [release reboot/restore check](https://github.com/sarvesh-kr/sift/actions/runs/39012745889)
+  passed for APK source `2155ec5a0dca3b64d69e6ecb5178bdaacdc0c0de`.
 - Signed release verification includes APK certificate, manifest permissions,
   non-debuggable status, universal architectures, 16 KB native-library alignment,
   source provenance, and SHA-256 checksums. No signing key is published.

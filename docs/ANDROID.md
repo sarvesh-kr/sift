@@ -93,7 +93,12 @@ owner configures them, CI deliberately produces unsigned release artifacts.
 An authorized maintainer can sign a verified artifact locally with
 `scripts/sign-android.py --directory ... --keystore ... --password-file ...
 --build-tools ...` and publish only the signed APK, updated build record, and
-checksum manifest after all device tests pass. The first APK uses this route.
+checksum manifest after all device tests pass. The first APK uses this route. When the direct release-upload endpoint is unavailable,
+`android-signed-upload.yml` attaches public APK/build-record Git blobs to an
+existing draft. It verifies the pinned signing certificate, successful build and
+device jobs, source metadata, ZIP alignment, and every original APK entry against
+the tested CI artifact. Only signature entries may be added. It receives no
+private key and leaves publication as a separate action.
 When the secrets are configured, Android version tags automatically publish a
 signed preview only after both emulator targets pass. Signed APKs are verified
 with `apksigner`; certificate fingerprints are recorded in the build metadata.

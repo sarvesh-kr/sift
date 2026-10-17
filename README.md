@@ -3,6 +3,7 @@
 **Your space, simplified.** A local storage explorer and cleanup assistant for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
 
 [![Quality checks](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml)
+[![Android builds](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml)
 [![Desktop builds](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml)
 
 **[Website & downloads](https://sift.sarvesh.si)** · [GitHub releases](https://github.com/sarvesh-kr/sift/releases) · [Build status](https://github.com/sarvesh-kr/sift/actions) · [Build/release instructions](docs/RELEASING.md)
@@ -48,6 +49,8 @@ Rust handles directory traversal, metadata, hashing, and trash operations withou
 The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-specific package for each platform. The separate native Android client respects Android shared-storage restrictions; it does not run the desktop filesystem engine on a phone.
 
 ## Android phones
+
+<img src="artifacts/sift-android.png" width="320" alt="Native Sift Android storage overview on an Android emulator" />
 
 Download the signed APK from [the website](https://sift.sarvesh.si/#download) or
 [Android releases](https://github.com/sarvesh-kr/sift/releases?q=android).
