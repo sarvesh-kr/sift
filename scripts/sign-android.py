@@ -24,7 +24,7 @@ for path in [source,infos[0]]:
  if hashlib.sha256(path.read_bytes()).hexdigest()!=checks[path.name]: raise SystemExit('Input checksum mismatch: '+path.name)
 assert metadata['signed'] is False and metadata['versionCode']>0
 aligned=root/'aligned.apk'
-subprocess.run([str(args.build_tools/'zipalign'),'-p','-f','4',str(source),str(aligned)],check=True)
+subprocess.run([str(args.build_tools/'zipalign'),'-P','16','-f','4',str(source),str(aligned)],check=True)
 env=os.environ.copy();env['SIFT_LOCAL_SIGN_PASSWORD']=args.password_file.read_text().strip()
 subprocess.run([str(args.build_tools/'apksigner'),'sign','--ks',str(args.keystore),'--ks-key-alias','sift',
                 '--ks-pass','env:SIFT_LOCAL_SIGN_PASSWORD','--key-pass','env:SIFT_LOCAL_SIGN_PASSWORD',
