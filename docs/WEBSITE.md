@@ -57,11 +57,11 @@ GitHub Pages settings must retain **GitHub Actions** as the source and
 source. The `github-pages` environment is the deployment target. The workflow
 checks the live HTTPS page after deployment.
 
-GitHub has approved the TLS certificate for `sift.sarvesh.si` (verified through
-its Pages API), and HTTPS returns the site with certificate verification enabled.
-The available integration cannot update Pages repository settings (HTTP 403).
-The repository owner should enable **Settings → Pages → Enforce HTTPS** now that
-the certificate is approved; until enabled, GitHub also serves plain HTTP.
+GitHub has approved the TLS certificate for `sift.sarvesh.si`, and its Pages API
+confirms **Enforce HTTPS is enabled** (`https_enforced: true`). Plain HTTP returns
+a 301 redirect to HTTPS, preserving the path and query string. The HTTPS site
+returns successfully with certificate verification enabled. Keep the native
+**Settings → Pages → Enforce HTTPS** setting enabled.
 
 Previous host-specific Cloudflare redirect and strict-origin rules are inactive
 because this record is DNS-only. They are not a substitute for GitHub's native
