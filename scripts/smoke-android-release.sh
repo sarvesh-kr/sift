@@ -26,6 +26,7 @@ adb exec-out screencap -p > android-release-results/scanned.png
 python scripts/check-android-screen.py 'Files' --tap
 python scripts/check-android-screen.py 'Sift-release-fixture.txt'
 adb exec-out screencap -p > android-release-results/files.png
-adb logcat -d -t 1000 > android-release-results/logcat.txt
-if rg -q 'FATAL EXCEPTION' android-release-results/logcat.txt; then exit 1; fi
+app_pid=$(adb shell pidof -s si.sarvesh.sift)
+adb logcat -d --pid "$app_pid" -t 1000 > android-release-results/logcat.txt
+if grep -q 'FATAL EXCEPTION' android-release-results/logcat.txt; then exit 1; fi
 adb shell rm /sdcard/Download/Sift-release-fixture.txt

@@ -2,10 +2,10 @@ name: Android builds
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'scripts/package-android.py', '.github/workflows/android.yml']
+    paths: ['android/**', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
     tags: ['android-v*']
   pull_request:
-    paths: ['android/**', 'scripts/package-android.py', '.github/workflows/android.yml']
+    paths: ['android/**', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: read

@@ -9,7 +9,7 @@ adb shell am start -n si.sarvesh.sift/.MainActivity
 onboarding=0
 for attempt in $(seq 1 10); do
   adb shell uiautomator dump /sdcard/sift-window.xml >/dev/null 2>&1 || true
-  if adb shell cat /sdcard/sift-window.xml | rg -q 'Allow shared storage access'; then onboarding=1; break; fi
+  if adb shell cat /sdcard/sift-window.xml | grep -q 'Allow shared storage access'; then onboarding=1; break; fi
 done
 if [ "$onboarding" != 1 ]; then adb logcat -d -t 1000; exit 1; fi
 adb exec-out screencap -p > "android-device-results/onboarding-api-$1.png"
@@ -28,7 +28,7 @@ adb shell am start -n si.sarvesh.sift/.MainActivity
 # Give the first Compose frame time to draw before capturing the actual emulator UI.
 for attempt in $(seq 1 10); do
   adb shell uiautomator dump /sdcard/sift-window.xml >/dev/null 2>&1 || true
-  if adb shell cat /sdcard/sift-window.xml | rg -q 'Your phone'; then break; fi
+  if adb shell cat /sdcard/sift-window.xml | grep -q 'Your phone'; then break; fi
 done
 adb exec-out screencap -p > "android-device-results/phone-api-$1.png"
 adb logcat -d -t 1000 > android-device-results/logcat.txt
