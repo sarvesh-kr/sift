@@ -4,7 +4,11 @@ The repository is [sarvesh-kr/sift](https://github.com/sarvesh-kr/sift).
 
 ## Continuous checks
 
-`Quality checks` runs on pushes to `main` and pull requests. It checks the TypeScript production build, frontend analysis tests, Chromium interface tests, Rust formatting, and Rust scanner tests. Desktop builds call the same checks before starting native packaging.
+`Quality checks` runs on relevant pushes to `main` and on all pull requests. On `main`, documentation, screenshots, website-only and Android-only changes do not rerun the desktop suites. Superseded checks on the same ref are cancelled. The workflow checks the TypeScript production build, frontend analysis tests, Chromium interface tests, Rust formatting, and Rust scanner tests. Pull requests retain their checks, and desktop builds always call the same checks before starting native packaging, regardless of path filters.
+
+Website changes still deploy automatically. Download refreshes after build completion are restricted to successful tagged release builds; ordinary development builds do not redeploy the marketing site.
+
+Build emails are GitHub account preferences, not workflow email steps. To stop them, open [notification settings](https://github.com/settings/notifications), go to **System → Actions**, deselect **Email**, and save. Keep **On GitHub** enabled if you want failures in the web inbox. This preference applies to the account's Actions notifications, not just Sift; repository workflow access cannot change it.
 
 ## Build packages without publishing
 

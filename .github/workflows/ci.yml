@@ -2,10 +2,26 @@ name: Quality checks
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'artifacts/**'
+      - 'docs/**'
+      - 'website/**'
+      - 'website-tests/**'
+      - 'android/**'
+      - 'scripts/*android*'
+      - 'scripts/build-site.py'
+      - 'scripts/test-site-builder.py'
+      - 'playwright.website.config.ts'
+      - '.github/workflows/android*.yml'
+      - '.github/workflows/pages.yml'
   pull_request:
   workflow_call:
 permissions:
   contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   frontend:
     name: Interface and analysis tests

@@ -13,7 +13,8 @@ on:
   release:
     types: [published]
   # Releases created with GITHUB_TOKEN do not emit another workflow event.
-  # Refresh downloads after our desktop workflow has uploaded every asset.
+  # Refresh downloads after tagged builds have uploaded every asset.
+  # Ordinary development builds do not change published downloads.
   workflow_run:
     workflows: ['Desktop builds', 'Android builds']
     types: [completed]
@@ -43,7 +44,14 @@ jobs:
         run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
 
   build:
-    if: github.event_name != 'release' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository))
+    if: >-
+      github.event_name != 'release' &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_repository.full_name == github.repository &&
+         github.event.workflow_run.event == 'push' &&
+         ((github.event.workflow_run.name == 'Desktop builds' && startsWith(github.event.workflow_run.head_branch, 'v')) ||
+          (github.event.workflow_run.name == 'Android builds' && startsWith(github.event.workflow_run.head_branch, 'android-v')))))
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
