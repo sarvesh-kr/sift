@@ -27,6 +27,22 @@ python scripts/check-android-screen.py 'Files' --tap
 python scripts/check-android-screen.py 'Search files' --input 'Sift-release-fixture.txt'
 python scripts/check-android-screen.py 'Sift-release-fixture.txt'
 adb exec-out screencap -p > android-release-results/files.png
+python scripts/check-android-screen.py 'Sift-release-fixture.txt' --tap --exact --last
+python scripts/check-android-screen.py 'Review this file only' --tap --exact
+python scripts/check-android-screen.py 'Move to Sift trash' --tap --exact --last
+python scripts/check-android-screen.py '1 file moved to Sift trash'
+python scripts/check-android-screen.py 'Trash' --tap --exact
+python scripts/check-android-screen.py '' --class-name android.widget.CheckBox --tap
+python scripts/check-android-screen.py 'Restore' --tap --exact
+python scripts/check-android-screen.py 'Restore files' --tap --exact
+python scripts/check-android-screen.py '1 file restored'
+adb exec-out screencap -p > android-release-results/restored.png
+python - <<'CHECK'
+import subprocess
+contents=subprocess.check_output(['adb','shell','cat','/sdcard/Download/Sift-release-fixture.txt'],text=True)
+assert contents.strip()=='Disposable release smoke fixture'
+print('Optimized APK cleanup UI moved and restored the exact original contents.')
+CHECK
 app_pid=$(adb shell pidof -s si.sarvesh.sift)
 adb logcat -d --pid "$app_pid" -t 1000 > android-release-results/logcat.txt
 if grep -q 'FATAL EXCEPTION' android-release-results/logcat.txt; then exit 1; fi
