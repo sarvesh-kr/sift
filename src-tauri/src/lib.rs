@@ -218,7 +218,7 @@ async fn file_preview(
     let result = tauri::async_runtime::spawn_blocking(move || {
         // Filesystem/locking/decoding stays off the IPC executor. New preview
         // requests yield to scans and cleanup; existing readers finish first.
-        let _preview = session.preview_jobs.read().map_err(|e| e.to_string())?;
+        let _preview = session.preview_jobs.try_read().map_err(|e| e.to_string())?;
         if session.busy.load(Ordering::Acquire) {
             return Err("Previews paused during file operations.".into());
         }

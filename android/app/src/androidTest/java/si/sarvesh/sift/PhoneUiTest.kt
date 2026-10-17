@@ -44,7 +44,7 @@ class PhoneUiTest {
             compose.onNodeWithContentDescription("Select ${file.name}").performScrollTo().assertIsOn()
             compose.waitUntil(10_000){compose.onAllNodesWithContentDescription("Preview of ${file.name}").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Grid view").performScrollTo().performClick()
-            compose.onNodeWithText(file.name).performScrollTo().performClick()
+            compose.onNode(hasText(file.name) and !hasSetTextAction()).performScrollTo().performClick()
             compose.onNodeWithText("Review this file only").performClick()
             compose.onAllNodesWithContentDescription("Preview of ${file.name}").onLast().assertIsDisplayed()
             compose.onNodeWithText("Keep exploring").performClick()

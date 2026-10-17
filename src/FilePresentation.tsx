@@ -59,12 +59,12 @@ export function FileThumbnail({ file, large = false }: { file: FileEntry; large?
   const Icon = icons[file.category];
   const extension = file.name.includes('.') ? file.name.split('.').at(-1)!.slice(0, 7).toUpperCase() : 'FILE';
   useEffect(() => {
-    let alive = true; setPreview(null);
+    let alive = true; let visible = false; setPreview(null);
     if (!store.enabled || !element.current) return;
     const observer = new IntersectionObserver(entries => {
-      if (!entries.some(entry => entry.isIntersecting)) return;
-      observer.disconnect();
-      void store.load(file, () => alive).then(value => { if (alive) setPreview(value); });
+      visible = entries.some(entry => entry.isIntersecting);
+      if (!visible) { setPreview(null); return; }
+      void store.load(file, () => alive && visible).then(value => { if (alive && visible) setPreview(value); });
     }, { rootMargin: '120px' });
     observer.observe(element.current);
     return () => { alive = false; observer.disconnect(); };

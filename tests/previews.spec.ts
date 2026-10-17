@@ -28,6 +28,12 @@ test('real previews are lazy, switching layouts retains selection, and all revie
   await expect(page.getByRole('img',{name:'Preview of portrait-002.png'})).toBeVisible();
   await expect.poll(() => page.getByRole('img',{name:'Preview of portrait-002.png'}).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   expect(await page.evaluate(() => (window as unknown as {previewCalls:string[]}).previewCalls.some(path => path.includes('079')))).toBe(false);
+  const initialReads = await page.evaluate(() => (window as unknown as {previewCalls:string[]}).previewCalls.filter(path => path.includes('002')).length);
+  await page.locator('.file-name').filter({hasText:'portrait-029.png'}).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('img',{name:'Preview of portrait-002.png'})).toHaveCount(0);
+  await page.locator('.file-name').filter({hasText:'portrait-002.png'}).scrollIntoViewIfNeeded();
+  await expect(page.getByRole('img',{name:'Preview of portrait-002.png'})).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as {previewCalls:string[]}).previewCalls.filter(path => path.includes('002')).length)).toBe(initialReads);
   await page.getByRole('checkbox',{name:'Select portrait-002.png',exact:true}).check();
   await page.getByRole('button',{name:'Grid view',exact:true}).click();
   await expect(page.locator('.file-card')).toHaveCount(30);
