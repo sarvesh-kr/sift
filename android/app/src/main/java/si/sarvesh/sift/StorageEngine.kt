@@ -226,6 +226,9 @@ class StorageEngine(private val context: Context,
         // Hold the validated source object across rename. Android's media FUSE
         // layer may change timestamps or expose a different identity in app data.
         open(entry).use { source ->
+            // Media FUSE may return ENOENT for fstat on the old node after
+            // rename, even while its data descriptor is still readable.
+            val held = Os.fstat(source.fd)
             writeIndex(id, json)
             if (!file.renameTo(destination)) {
                 AtomicFile(File(index, "$id.json")).delete()
@@ -233,7 +236,6 @@ class StorageEngine(private val context: Context,
             }
             check(!file.exists() && destination.isFile) { "Move not confirmed. Check Sift trash before retrying." }
             val stored = checked(destination)
-            val held = Os.fstat(source.fd)
             require(stored.size == entry.size && held.st_size == entry.size) { "Moved file size changed. Check Sift trash before retrying." }
             if (stored.device != held.st_dev || stored.inode != held.st_ino) {
                 // Only the identity-changing case needs a full read. Most moves
