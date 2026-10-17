@@ -1109,14 +1109,19 @@ mod tests {
     use super::*;
     #[test]
     fn deleted_ntfs_records_export_original_contents_with_hashes_and_path_evidence() {
-        let source = tempfile::NamedTempFile::new().unwrap();
+        let source_folder = tempfile::tempdir().unwrap();
+        let source = source_folder.path().join("ntfs.img");
         let mut gzip = flate2::read::GzDecoder::new(
             &include_bytes!("../../recovery-fixtures/ntfs-deleted.img.gz")[..],
         );
-        std::io::copy(&mut gzip, &mut source.as_file()).unwrap();
-        let before = hex(&Sha256::digest(std::fs::read(source.path()).unwrap()));
+        {
+            let mut writer = File::create(&source).unwrap();
+            std::io::copy(&mut gzip, &mut writer).unwrap();
+            writer.sync_all().unwrap();
+        }
+        let before = hex(&Sha256::digest(std::fs::read(&source).unwrap()));
         let cancel = AtomicBool::new(false);
-        let mut session = RecoverySession::open(source.path()).unwrap();
+        let mut session = RecoverySession::open(&source).unwrap();
         let report = session.scan(&cancel, |_| {}).unwrap();
         assert_eq!(report.files.len(), 2);
         assert_eq!(report.method, "ntfs-deleted-records-v1");
@@ -1152,7 +1157,7 @@ mod tests {
         assert_eq!(manifest["method"], "ntfs-deleted-records-v1");
         assert_eq!(
             before,
-            hex(&Sha256::digest(std::fs::read(source.path()).unwrap()))
+            hex(&Sha256::digest(std::fs::read(&source).unwrap()))
         );
     }
     const SAMPLE: &[u8] = include_bytes!("../../recovery-fixtures/sample.img");

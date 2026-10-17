@@ -192,11 +192,64 @@ pub fn destination_allowed(source: &Drive, path: &Path) -> Result<(), String> {
             .ok_or("Destination device information unavailable")?;
         let external = dict.get("Internal").and_then(|v| v.as_boolean()) == Some(false);
         let whole = dict
-            .get("ParentWholeDisk")
+            .get("APFSContainerReference")
+            .or_else(|| dict.get("ParentWholeDisk"))
             .or_else(|| dict.get("PartOfWhole"))
             .and_then(|v| v.as_string())
             .ok_or("Cannot verify destination disk")?;
-        if !external || whole == source.whole {
+        let mut same_device = whole == source.whole;
+        let is_apfs = dict
+            .get("FilesystemType")
+            .and_then(|v| v.as_string())
+            .is_some_and(|s| s.eq_ignore_ascii_case("apfs"))
+            || dict.contains_key("APFSContainerReference")
+            || source.filesystem.contains("APFS");
+        if is_apfs {
+            let bytes = command("/usr/sbin/diskutil", &["apfs", "list", "-plist"])?;
+            let apfs = plist::Value::from_reader(std::io::Cursor::new(bytes))
+                .map_err(|e| e.to_string())?;
+            let containers = apfs
+                .as_dictionary()
+                .and_then(|v| v.get("Containers"))
+                .and_then(|v| v.as_array())
+                .ok_or("Cannot verify APFS physical stores")?;
+            let physical = |disk: &str| -> Vec<String> {
+                for item in containers {
+                    if let Some(container) = item.as_dictionary() {
+                        if container
+                            .get("ContainerReference")
+                            .and_then(|v| v.as_string())
+                            == Some(disk)
+                        {
+                            if let Some(stores) =
+                                container.get("PhysicalStores").and_then(|v| v.as_array())
+                            {
+                                return stores
+                                    .iter()
+                                    .filter_map(|v| {
+                                        v.as_dictionary()
+                                            .and_then(|d| d.get("DeviceIdentifier"))
+                                            .and_then(|v| v.as_string())
+                                    })
+                                    .map(|id| {
+                                        let rest = &id[4.min(id.len())..];
+                                        format!("disk{}", rest.split('s').next().unwrap_or(rest))
+                                    })
+                                    .collect();
+                            }
+                        }
+                    }
+                }
+                vec![disk.to_owned()]
+            };
+            let from = physical(&source.whole);
+            let to = physical(whole);
+            if from.is_empty() || to.is_empty() {
+                return Err("Cannot verify APFS source/destination devices".into());
+            }
+            same_device = from.iter().any(|disk| to.contains(disk));
+        }
+        if !external || same_device {
             return Err("For direct recovery on macOS, choose a different external physical disk as the destination.".into());
         }
     }
