@@ -75,8 +75,8 @@ class StorageEngine(private val context: Context,
         return file
     }
     private fun stopped() { check(!cancel.get()) { "Cleanup stopped. Completed moves remain available in Sift trash." } }
-    private fun open(entry: Entry, inTrash: Boolean = false): FileInputStream {
-        unchanged(entry, inTrash)
+    private fun open(entry: Entry): FileInputStream {
+        unchanged(entry)
         val fd = Os.open(entry.path, OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC, 0)
         try {
             val st = Os.fstat(fd)
@@ -223,30 +223,23 @@ class StorageEngine(private val context: Context,
         safeDirectories()
         val id = UUID.randomUUID().toString(); val destination = File(bin, id)
         val json = JSONObject().put("id", id).put("original", encode(entry)).put("trashedAt", System.currentTimeMillis())
-        // Hold the validated source object across rename. Android's media FUSE
-        // layer may change timestamps or expose a different identity in app data.
-        open(entry).use { source ->
-            // Media FUSE may return ENOENT for fstat on the old node after
-            // rename, even while its data descriptor is still readable.
-            val held = Os.fstat(source.fd)
-            writeIndex(id, json)
-            if (!file.renameTo(destination)) {
-                AtomicFile(File(index, "$id.json")).delete()
-                error("Could not move to Sift trash. No permanent-delete fallback was attempted.")
-            }
-            check(!file.exists() && destination.isFile) { "Move not confirmed. Check Sift trash before retrying." }
-            val stored = checked(destination)
-            require(stored.size == entry.size && held.st_size == entry.size) { "Moved file size changed. Check Sift trash before retrying." }
-            if (stored.device != held.st_dev || stored.inode != held.st_ino) {
-                // Only the identity-changing case needs a full read. Most moves
-                // stay fast and validate the same open filesystem object.
-                open(stored, true).use { target ->
-                    require(streamsEqual(source, target, entry.size)) { "Moved file contents differ. File retained in Sift trash." }
-                }
-            }
-            unchanged(stored, true)
-            writeIndex(id, json.put("stored", encode(stored)))
+        // Persist the intent, then revalidate immediately before Android's native
+        // rename. Media FUSE may change identity/mtime and invalidate old open
+        // handles after a successful move into app-owned storage. The rename
+        // acknowledgement and its postconditions are authoritative for a move;
+        // no copy/delete fallback or old-handle reads are used here.
+        writeIndex(id, json)
+        try {
+            unchanged(entry)
+            check(file.renameTo(destination)) { "Could not move to Sift trash. No permanent-delete fallback was attempted." }
+        } catch (error: Exception) {
+            if (!destination.exists()) AtomicFile(File(index, "$id.json")).delete()
+            throw error
         }
+        check(!file.exists() && destination.isFile) { "Move not confirmed. Check Sift trash before retrying." }
+        val stored = checked(destination)
+        require(stored.size == entry.size) { "Moved file size changed. File retained in Sift trash for review." }
+        writeIndex(id, json.put("stored", encode(stored)))
     }
     @Synchronized fun trash(): List<TrashEntry> {
         unreadableTrashRecords = 0

@@ -18,7 +18,11 @@ stream SHA-256, exclude hard links, and confirm matches with another byte pass.
 
 Sift trash is app-owned storage on the same primary volume. An atomic intent
 record is saved before each rename, so interrupted moves can be recovered.
-Failed moves never fall back to deletion. Restoring refuses collisions and
+Failed moves never fall back to deletion. Android media FUSE can change file
+identity/timestamps and invalidate old handles after renaming into app data.
+Trash therefore uses the native rename acknowledgment, revalidated source,
+absent original, private nonce-named destination, and preserved size; it records
+the destination’s actual metadata. Duplicate content is verified before moving. Restoring refuses collisions and
 missing or redirected original folders. Trash occupies space until explicitly
 emptied. **Uninstalling Sift removes its trash.** The app says this before moving
 files. It does not use or claim to manage Android Gallery's separate trash.
