@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Sift's core purpose is user-directed shared-storage file management.
+         This sideloaded APK is not a Google Play approval or listing. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <!-- No INTERNET, accessibility service, contacts, or package visibility permission. -->
+    <application android:allowBackup="false" android:label="Sift" android:icon="@drawable/ic_sift"
+        android:theme="@style/Theme.Sift" android:supportsRtl="true" android:usesCleartextTraffic="false">
+        <activity android:name=".MainActivity" android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

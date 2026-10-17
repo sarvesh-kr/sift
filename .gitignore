@@ -10,3 +10,11 @@ playwright-report/
 *.tsbuildinfo
 __pycache__/
 src-tauri/gen/schemas/
+android/.gradle/
+android/**/build/
+android/local.properties
+*.jks
+*.keystore
+*.p12
+dist-android/
+android-device-results/

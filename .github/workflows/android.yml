@@ -1,0 +1,103 @@
+name: Android builds
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', 'scripts/package-android.py', '.github/workflows/android.yml']
+    tags: ['android-v*']
+  pull_request:
+    paths: ['android/**', 'scripts/package-android.py', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install pinned Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Restore optional private release signer
+        env:
+          KEYSTORE: ${{ secrets.SIFT_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE" ]; then
+            printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/sift-signing.p12"
+            chmod 600 "$RUNNER_TEMP/sift-signing.p12"
+            echo "SIFT_ANDROID_KEYSTORE=$RUNNER_TEMP/sift-signing.p12" >> "$GITHUB_ENV"
+          fi
+      - name: Build, lint, and run model tests
+        working-directory: android
+        env:
+          SIFT_ANDROID_STORE_PASSWORD: ${{ secrets.SIFT_ANDROID_STORE_PASSWORD }}
+          SIFT_ANDROID_KEY_PASSWORD: ${{ secrets.SIFT_ANDROID_KEY_PASSWORD }}
+          SIFT_ANDROID_KEY_ALIAS: sift
+        run: ./gradlew --no-daemon :app:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:testDebugUnitTest
+      - name: Prepare APK and source record
+        run: python scripts/package-android.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sift-android-package
+          path: dist-android/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sift-android-test-apks
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sift-android-build-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+  device:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [30, 36]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          name: sift-android-test-apks
+          path: test-apks
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 600
+          script: bash scripts/test-android-device.sh ${{ matrix.api }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sift-android-device-${{ matrix.api }}
+          path: android-device-results/
+          if-no-files-found: warn
