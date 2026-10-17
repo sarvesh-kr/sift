@@ -16,7 +16,7 @@ data class SiftState(
     val inventory: Inventory = Inventory(), val scanned: Boolean = false, val compared: Boolean = false,
     val selected: Set<String> = emptySet(), val trashSelected: Set<String> = emptySet(), val trash: List<TrashEntry> = emptyList(),
     val result: Outcome? = null, val error: String? = null, val total: Long = 0, val available: Long = 0,
-    val needsScan: Boolean = false
+    val needsScan: Boolean = false, val trashWarnings: Int = 0
 )
 class SiftViewModel(application: Application) : AndroidViewModel(application) {
     private val engine = StorageEngine(application)
@@ -29,7 +29,7 @@ class SiftViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun updateStorage() {
         val trash = engine.trash(); val (total, available) = engine.space()
-        mutable.update { it.copy(trash = trash, total = total, available = available,
+        mutable.update { it.copy(trash = trash, trashWarnings = engine.unreadableTrashRecords, total = total, available = available,
             trashSelected = it.trashSelected.intersect(trash.map { f -> f.id }.toSet())) }
     }
     private fun progress(files: Int, phase: String) { mutable.update { it.copy(processed = files, phase = phase) } }

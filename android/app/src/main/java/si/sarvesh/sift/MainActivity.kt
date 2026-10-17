@@ -19,12 +19,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -77,10 +79,12 @@ class MainActivity : ComponentActivity() {
     var review by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<Entry?>(null) }
     var help by remember { mutableStateOf(false) }
+    var licenses by remember { mutableStateOf(false) }
     val visible = remember(state.inventory.files, query, filter) { state.inventory.files.filter {
         (filter == "All" || (filter == "Large" && it.size >= 100_000_000) || (filter == "Duplicates" && it.group != null) || it.category == filter) &&
             (it.name.contains(query, true) || it.path.contains(query, true))
     } }
+    var failureLimit by remember(state.result) { mutableStateOf(10) }
     val selected = if (tab == 2) state.trashSelected else state.selected
     Scaffold(containerColor = Paper, modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
         topBar = {
@@ -101,7 +105,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 NavigationBar(containerColor=Paper) {
-                    listOf("Space" to Icons.Default.Home, "Files" to Icons.Default.List, "Trash" to Icons.Default.Delete).forEachIndexed { i, item ->
+                    listOf("Space" to Icons.Default.Home, "Files" to Icons.AutoMirrored.Filled.List, "Trash" to Icons.Default.Delete).forEachIndexed { i, item ->
                         NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(item.second,null)},label={Text(item.first)})
                     }
                 }
@@ -118,8 +122,8 @@ class MainActivity : ComponentActivity() {
             state.result?.let { result -> item { Surface(shape=RoundedCornerShape(16.dp)) { Column(Modifier.padding(18.dp)) {
                 Text("${result.removed.size} ${if(result.removed.size==1) "file" else "files"} ${result.verb}",fontWeight=FontWeight.SemiBold)
                 Note(if(result.failed.isEmpty()) "Operation complete. Sift never switches cleanup modes after failure." else "${result.failed.size} not confirmed. Failed files remain selected.")
-                result.failed.take(10).forEach { Note(it.path); Text(it.error,fontSize=12.sp,color=Color(0xFF8D5832)) }
-                if(result.failed.size>10) Note("Showing 10 failures. Remaining files are still selected; rescan before retrying changed files.")
+                result.failed.take(failureLimit).forEach { Note(it.path); Text(it.error,fontSize=12.sp,color=Color(0xFF8D5832)) }
+                if(result.failed.size>failureLimit) TextButton(onClick={failureLimit+=25}){Text("Show more failures (${result.failed.size-failureLimit} remaining)")}
                 TextButton(onClick=model::dismissResult){Text("Dismiss results")}
             } } } }
             if (state.needsScan) item { Note("Files were restored. Rescan shared storage before further cleanup."); Button(onClick=model::scan,enabled=!state.busy&&state.access){Text("Rescan storage")} }
@@ -149,14 +153,20 @@ class MainActivity : ComponentActivity() {
                 items(visible,key={it.path}) { entry -> FileRow(entry,entry.path in state.selected,!state.busy&&!state.needsScan,{model.toggle(entry.path)},{details=entry}) }
             } else {
                 item { Text("A second chance.",fontSize=30.sp,fontWeight=FontWeight.SemiBold,letterSpacing=(-1).sp); Note("Sift trash holds files moved by this app. It is separate from your Gallery’s trash and still uses storage. Restore files, or permanently delete selected items."); Note("Uninstalling Sift removes its trash. Restore anything you need first.") }
-                if(state.trash.isEmpty()) item { EmptyCard("Sift trash is empty.") }
+                if(state.trashWarnings>0) item { Note("${state.trashWarnings} trash records could not be safely read and were left unchanged. Do not uninstall Sift until you have recovered any files you need.") }
+                if(state.trash.isEmpty()) item { EmptyCard(if(state.trashWarnings==0) "Sift trash is empty." else "No validated trash entries to show.") }
                 else item { Row(verticalAlignment=Alignment.CenterVertically) { Note("${state.trash.size} files · ${sizeLabel(state.trash.sumOf{it.stored.size})}"); Spacer(Modifier.weight(1f)); TextButton(onClick={model.select(state.trash.map{it.id}.toSet(),true)},enabled=!state.busy){Text("Select all")} } }
                 items(state.trash,key={it.id}) { entry -> FileRow(entry.original,entry.id in state.trashSelected,!state.busy,{model.toggle(entry.id,true)},{details=entry.original}) }
             }
         }
     }
     details?.let { entry -> AlertDialog(onDismissRequest={details=null},title={Text(entry.name)},text={Column(Modifier.verticalScroll(rememberScrollState())) { Note(entry.category); Text(sizeLabel(entry.size),fontSize=25.sp); Spacer(Modifier.height(16.dp)); Text(entry.path,fontSize=13.sp); if(entry.group!=null) Note("Verified duplicate group") }},confirmButton={ if(tab!=2) TextButton(onClick={model.select(setOf(entry.path));details=null;review="live"},enabled=!state.busy&&!state.needsScan&&state.access){Text("Review this file only")} else TextButton(onClick={details=null}){Text("Close")} },dismissButton={if(tab!=2) TextButton(onClick={details=null}){Text("Close")}}) }
-    if(help) AlertDialog(onDismissRequest={help=false},title={Text("Space, with care.")},text={Column(Modifier.verticalScroll(rememberScrollState())) { Note("Sift ${BuildConfig.VERSION_NAME} for Android 11+\n\nAllow shared-storage access in Android settings, then scan. Sift cannot access other apps’ private storage, system files, or protected Android folders. It does not clear RAM or other apps’ caches.\n\nChoose individual files or all filtered matches. Sift trash is restorable here; it still occupies storage. Uninstalling Sift deletes its trash. Permanent deletion requires typing the action and file count. No secure-wipe claim is made for phone flash storage.\n\nAn unchanged copy is retained for duplicate cleanup unless you explicitly acknowledge removing every selected copy with permanent deletion.\n\nEverything stays on your device. This app has no internet permission. See the repository’s LICENSE and Android notices for licenses.") }},confirmButton={TextButton(onClick={help=false}){Text("Got it")}})
+    if(help) AlertDialog(onDismissRequest={help=false},title={Text("Space, with care.")},text={Column(Modifier.verticalScroll(rememberScrollState())) { Note("Sift ${BuildConfig.VERSION_NAME} for Android 11+\n\nAllow shared-storage access in Android settings, then scan. Sift cannot access other apps’ private storage, system files, or protected Android folders. It does not clear RAM or other apps’ caches.\n\nChoose individual files or all filtered matches. Sift trash is restorable here; it still occupies storage. Uninstalling Sift deletes its trash. Permanent deletion requires typing the action and file count. No secure-wipe claim is made for phone flash storage.\n\nAn unchanged copy is retained for duplicate cleanup unless you explicitly acknowledge removing every selected copy with permanent deletion.\n\nEverything stays on your device. This app has no internet permission. See the repository’s LICENSE and Android notices for licenses.") }},confirmButton={TextButton(onClick={help=false}){Text("Got it")}},dismissButton={TextButton(onClick={help=false;licenses=true}){Text("Open source licenses")}})
+    if(licenses) {
+        val context=LocalContext.current
+        val notice=remember { context.assets.open("OPEN_SOURCE_NOTICES.txt").bufferedReader().use{it.readText()} }
+        AlertDialog(onDismissRequest={licenses=false},title={Text("Open source licenses")},text={Text(notice,Modifier.heightIn(max=480.dp).verticalScroll(rememberScrollState()),fontSize=12.sp)},confirmButton={TextButton(onClick={licenses=false}){Text("Close")}})
+    }
     review?.let { target -> CleanupDialog(state,target,onDismiss={review=null},onConfirm={action,phrase,allow -> if(target=="live")model.cleanup(action,phrase,allow) else model.manageTrash(target=="restore",phrase); review=null}) }
 }
 @Composable private fun AccessCard(request: ()->Unit,busy:Boolean) {

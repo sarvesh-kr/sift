@@ -47,6 +47,8 @@ class StorageEngine(private val context: Context,
     private val index = index.canonicalFile
     val cancel = AtomicBoolean(false)
     private var inventory = Inventory()
+    var unreadableTrashRecords: Int = 0
+        private set
     private val rootPath = root.canonicalFile.toPath()
     private val binPath = bin.canonicalFile.toPath()
     private val indexPath = index.canonicalFile.toPath()
@@ -231,6 +233,7 @@ class StorageEngine(private val context: Context,
         writeIndex(id, json.put("stored", encode(stored)))
     }
     @Synchronized fun trash(): List<TrashEntry> {
+        unreadableTrashRecords = 0
         if (!index.exists()) return emptyList()
         require(index.canonicalPath == index.absolutePath && bin.canonicalPath == bin.absolutePath) { "Trash location was redirected." }
         return index.listFiles().orEmpty().filter { it.name.endsWith(".json") }.mapNotNull { manifest ->
@@ -246,7 +249,7 @@ class StorageEngine(private val context: Context,
                 require(stored.path == destination.path && stored.size == original.size && stored.modified == original.modified)
                 unchanged(stored, true)
                 TrashEntry(id, original, stored, json.getLong("trashedAt"))
-            }.getOrNull()
+            }.getOrElse { unreadableTrashRecords++; null }
         }.sortedByDescending { it.trashedAt }
     }
     @Synchronized fun manageTrash(ids: Set<String>, restore: Boolean, phrase: String, progress: (Int, String) -> Unit): Outcome {

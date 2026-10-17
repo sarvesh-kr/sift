@@ -97,6 +97,12 @@ class StorageEngineTest {
         assertEquals(1,engine.manageTrash(setOf(entry.id),true,""){_,_->}.removed.size)
         assertEquals("recover",file.readText())
     }
+    @Test fun corruptTrashIndexIsReportedAndNeverDeletesStoredFiles() = fixture {root,bin,index,engine ->
+        val file=File(root,"selected").apply{writeText("keep safe")};scan(engine);clean(engine,setOf(file.path),Action.TRASH)
+        val entry=engine.trash().single();File(index,"${entry.id}.json").writeText("broken")
+        assertTrue(engine.trash().isEmpty());assertEquals(1,engine.unreadableTrashRecords)
+        assertEquals("keep safe",File(bin,entry.id).readText())
+    }
     @Test fun actualSharedStorageMovesIntoAppTrashAndRestores() {
         assertTrue("CI must grant All files access to this isolated emulator app",Environment.isExternalStorageManager())
         val id=UUID.randomUUID().toString()
