@@ -41,7 +41,8 @@ test('mobile layout keeps all platform downloads accessible without horizontal o
     await expect(page.getByRole('link', { name: 'Download Sift', exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Download Sift', exact: true }).click();
     await expect(page).toHaveURL(/#download$/);
-    await expect(page.locator('.download-card')).toHaveCount(3);
+    const release = await (await page.request.get('/release.json')).json();
+    await expect(page.locator('.download-card:visible')).toHaveCount(release.ANDROID_HIDDEN ? 3 : 4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     for (const image of await page.locator('img').all()) {
       await image.scrollIntoViewIfNeeded();
@@ -59,5 +60,23 @@ test('essential download links and installation help work without JavaScript', a
   await expect(page.locator('[data-asset="windows-setup"]')).toHaveAttribute('href', /setup\.exe$/);
   await page.getByText('Why might my computer show a security warning?', { exact: true }).click();
   await expect(page.locator('details[open]')).toContainText('not notarized');
+  await context.close();
+});
+
+
+test('Android phones get an APK recommendation and usable install instructions', async ({ browser }) => {
+  const context = await browser.newContext({ userAgent: 'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 Chrome/140.0.0.0 Mobile Safari/537.36', viewport: {width: 390, height: 844} });
+  const page = await context.newPage();
+  await page.goto('http://127.0.0.1:4173/');
+  const release = await (await page.request.get('/release.json')).json();
+  if (!release.ANDROID_HIDDEN) {
+    await expect(page.locator('[data-asset="android-apk"]')).toHaveAttribute('href', release.ANDROID_URL);
+    await expect(page.locator('#download-android')).toHaveClass(/is-recommended/);
+    await expect(page.locator('#download-linux')).not.toHaveClass(/is-recommended/);
+  }
+  await page.getByText('How do I install Sift on Android?', {exact: true}).click();
+  await expect(page.locator('details[open]')).toContainText('All files access');
+  await expect(page.locator('details[open]')).toContainText('Uninstalling Sift deletes its trash');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await context.close();
 });

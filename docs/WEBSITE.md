@@ -34,7 +34,7 @@ then run:
 npx playwright test --config playwright.website.config.ts
 ```
 
-These checks cover all six release asset links, Mac architecture selection,
+These checks cover desktop and Android release asset links, Mac architecture selection,
 keyboard-accessible previews, image loading, narrow layouts, and operation
 without JavaScript.
 
@@ -42,15 +42,23 @@ without JavaScript.
 
 `.github/workflows/pages.yml` builds, checks, and deploys the site on relevant
 pushes to `main`, on published releases, or through manual dispatch. It also runs
-after successful **Desktop builds**, because GitHub releases created with the
+after successful **Desktop builds** or **Android builds**, because GitHub releases created with the
 workflow's own token do not trigger another release workflow.
 
-The builder uses the newest published release that has **all six** expected
+The desktop builder uses the newest published release that has **all six** expected
 installer/archive assets plus `SHA256SUMS.txt`. It includes preview releases and
 labels them. Incomplete releases are skipped, preserving the previous complete
 version; if none is complete, deployment fails instead of publishing bad links.
 Links are rendered into HTML at build time, so visitors do not depend on GitHub
 API rate limits or JavaScript. All downloads go directly to GitHub release assets.
+
+Android is resolved independently from tags `android-vX.Y.Z`. An Android download
+appears only when a published release includes the signed filename
+`Sift-X.Y.Z-android.apk`, its build record, and `SHA256SUMS-android.txt`. Unsigned
+and incomplete Android builds are ignored; previous complete APKs remain linked.
+The Android card uses its own version and checksum. Android phones are recommended
+the APK rather than a Linux download. Release completeness and URL provenance
+have Python regression checks in `scripts/test-site-builder.py`.
 
 GitHub Pages settings must retain **GitHub Actions** as the source and
 `sift.sarvesh.si` as the domain. `website/CNAME` also records the domain in the

@@ -25,6 +25,33 @@ SUFFIXES = {
 }
 
 
+def android_data(releases):
+    data = {"ANDROID_HIDDEN": "hidden", "ANDROID_VERSION": "", "ANDROID_SIZE": "",
+            "ANDROID_URL": REPO + "/releases", "ANDROID_RELEASE_URL": REPO + "/releases",
+            "ANDROID_CHECKSUMS_URL": REPO + "/releases"}
+    for release in sorted(releases, key=lambda r: r.get("published_at") or "", reverse=True):
+        tag = release.get("tag_name", "")
+        if release.get("draft") or not re.fullmatch(r"android-v\d+\.\d+\.\d+", tag):
+            continue
+        version = tag.removeprefix("android-v")
+        assets = {a["name"]: a for a in release.get("assets", []) if a.get("state") == "uploaded" and a.get("size", 0) > 0}
+        apk = f"Sift-{version}-android.apk"
+        names = [apk, f"Sift-{version}-android-build-info.json", "SHA256SUMS-android.txt"]
+        if not all(name in assets for name in names):
+            continue
+        expected = REPO + "/releases/download/" + tag + "/"
+        for name in names:
+            if assets[name]["browser_download_url"] != expected + name:
+                raise ValueError("Unexpected Android release URL")
+        data.update(ANDROID_HIDDEN="", ANDROID_VERSION="v"+version,
+                    ANDROID_URL=assets[apk]["browser_download_url"],
+                    ANDROID_SIZE=f"{assets[apk]['size'] / 1_000_000:.1f} MB",
+                    ANDROID_RELEASE_URL=REPO+"/releases/tag/"+tag,
+                    ANDROID_CHECKSUMS_URL=assets["SHA256SUMS-android.txt"]["browser_download_url"])
+        break
+    return data
+
+
 def release_data(releases):
     """Use newest complete release, including deliberately labeled previews."""
     for release in sorted(releases, key=lambda r: r.get("published_at") or "", reverse=True):
@@ -52,6 +79,7 @@ def release_data(releases):
             asset = assets[name]
             data[key + "_URL"] = asset["browser_download_url"]
             data[key + "_SIZE"] = f"{asset['size'] / 1_000_000:.1f} MB"
+        data.update(android_data(releases))
         return data
     raise ValueError("No complete published release: refusing to publish broken download links")
 

@@ -94,3 +94,10 @@ with `apksigner`; certificate fingerprints are recorded in the build metadata.
 
 The website resolves Android independently from complete desktop releases, so
 adding an APK does not remove or replace Windows, Linux, or Mac downloads.
+
+The initial Sift Android signing certificate SHA-256 fingerprint is:
+
+```text
+e9077ccd2d0ced08d77ae918fd2a665eea95a7190710a99ea0e3ae61df52334a
+```
+This is a public certificate fingerprint, not the private signing key.

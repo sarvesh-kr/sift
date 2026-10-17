@@ -1,20 +1,21 @@
 # Sift
 
-**Your space, simplified.** A lightweight desktop file explorer and cleanup assistant, built with Rust, Tauri 2, React, and TypeScript.
+**Your space, simplified.** A local storage explorer and cleanup assistant for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
 
 [![Quality checks](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml)
 [![Desktop builds](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/build.yml)
 
 **[Website & downloads](https://sift.sarvesh.si)** · [GitHub releases](https://github.com/sarvesh-kr/sift/releases) · [Build status](https://github.com/sarvesh-kr/sift/actions) · [Build/release instructions](docs/RELEASING.md)
 
-| Computer | Download |
+| Device | Download |
 | --- | --- |
 | Windows x64 | `windows-x64-setup.exe` or `windows-x64-portable.zip` |
 | Linux x64 | `linux-x64.deb` or `linux-x64.AppImage` |
 | Apple Silicon Mac (M1 or newer) | `macos-apple-silicon.dmg` |
 | Intel Mac | `macos-intel.dmg` |
+| Android 11+ phone | Signed `Sift-0.1.0-android.apk` |
 
-Installers and archives are attached to tagged preview releases after every platform build passes. The initial workspace uses labeled sample data; click **Scan a folder** to index your own files.
+Installers and archives are attached to tagged preview releases after every platform build passes. The desktop initial workspace uses labeled sample data; click **Scan a folder** to index your own files.
 
 ![Sift Cleanup Center](artifacts/sift-cleanup-center.png)
 
@@ -22,7 +23,7 @@ Version **0.2.0** adds an explanation-based Cleanup Center, folder drill-down, v
 
 Version **0.3.0** adds three explicit cleanup actions: Recycle Bin / trash (default), permanent deletion, and best-effort overwrite-and-delete. Apply them to one file, a selection, or all matches in the current filtered view, including unloaded rows. Permanent actions require typing the exact action and file count; removing all known duplicate copies also requires a separate acknowledgment. Windows recycling retains the isolated STA Shell worker, per-file errors, and verified bin destination from 0.2.1. Recycling never falls back to permanent deletion.
 
-## What works
+## What works on desktop
 
 - Select a local folder or drive with the native folder picker.
 - Scan nested files on a background Rust thread, with progress and cancellation.
@@ -44,7 +45,30 @@ The desktop app initially shows a clearly labeled sample workspace. **Scan a fol
 
 Rust handles directory traversal, metadata, hashing, and trash operations without a Python or Node runtime. Tauri uses the operating system's webview instead of shipping a separate Chromium engine. The interface is a small static React/TypeScript bundle, with Lucide icons and locally bundled fonts. No server, accounts, analytics, network API, or cloud AI is involved.
 
-The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-specific package for each platform. This project does not implement mobile disk cleanup: phone operating systems enforce different storage restrictions.
+The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-specific package for each platform. The separate native Android client respects Android shared-storage restrictions; it does not run the desktop filesystem engine on a phone.
+
+## Android phones
+
+Download the signed APK from [the website](https://sift.sarvesh.si/#download) or
+[Android releases](https://github.com/sarvesh-kr/sift/releases?q=android).
+Android 11 or newer is required. Allow APK installation from your browser or file
+manager when Android asks. Open Sift, explicitly enable its **All files access**
+in system settings, return to the app, and scan shared phone storage.
+
+The native client includes category browsing, large-file filtering, search,
+exact duplicate comparison, individual and all-match selection, restorable
+**Sift trash**, and typed confirmation for permanent deletion. It has no internet
+permission, accounts, ads, accessibility service, or automatic background cleanup.
+Other apps' private data, protected Android folders, system files, and RAM are
+outside its scope. Scans are capped at 100,000 files.
+
+**Sift trash still occupies storage, and uninstalling Sift removes that trash.**
+Restore needed files before uninstalling; permanently empty selected trash items
+to reclaim their space. Gallery trash is separate. There is no Android secure-wipe
+claim for flash, backups, or cloud copies. Android APK versions are independent
+of desktop releases. See [Android architecture, testing, signing, and release
+instructions](docs/ANDROID.md). This is a sideloaded preview, not a Google Play
+listing.
 
 ## Preview the interface
 

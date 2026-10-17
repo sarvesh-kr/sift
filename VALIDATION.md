@@ -30,3 +30,25 @@ after an explicit mode choice and matching typed confirmation. Recycle Bin capac
 locks, and OS access rules can prevent a legitimate recycle operation.
 
 See README.md for reproduction steps and PRODUCT-GOALS.md for benchmark gates.
+
+## Android 0.1.0 release gates
+
+- Release APK compilation and resource/code shrinking, Android lint, and three
+  model regressions for extension categorization, exact typed confirmations, and
+  duplicate singleton cleanup.
+- Eleven instrumented checks on Android 11/API 30 and Android 16/API 36 emulators:
+  protected-folder and symlink exclusion, changed-file rejection, exact
+  confirmation and scan allowlists, duplicate-copy protection and hard links,
+  cancellation, Unicode trash/restore, collision refusal, persistence, interrupted
+  journal recovery, corrupt-record preservation, actual shared-storage moves into
+  app-owned trash, and native Compose navigation.
+- First-launch onboarding is checked without storage access before granting the
+  permission only to the isolated emulator test app.
+- Signed release verification includes APK certificate, manifest permissions,
+  non-debuggable status, universal architectures, 16 KB native-library alignment,
+  source provenance, and SHA-256 checksums. No signing key is published.
+
+Emulators do not establish physical-device or OEM-wide qualification. Android
+cannot clean other apps' protected private data. Trash remains app-owned storage
+and is removed when Sift is uninstalled. Permanent deletion cannot guarantee
+physical erasure from flash or synchronized copies. See docs/ANDROID.md.

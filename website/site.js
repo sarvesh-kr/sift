@@ -59,7 +59,7 @@ macButtons.forEach(button => button.addEventListener('click', () => {
 // Recommend a platform without guessing the processor or hiding other downloads.
 const platform = navigator.userAgentData?.platform || navigator.platform || '';
 const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1);
-const system = mobile ? null : /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'macos' : /Linux/i.test(platform) ? 'linux' : null;
+const system = /Android/i.test(navigator.userAgent) || /Android/i.test(platform) ? 'android' : mobile ? null : /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'macos' : /Linux/i.test(platform) ? 'linux' : null;
 if (system) {
   const card = document.querySelector(`[data-platform="${system}"]`);
   card?.classList.add('is-recommended');
