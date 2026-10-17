@@ -51,7 +51,7 @@ for attempt in 1 2 3; do
   if python scripts/check-android-screen.py 'A second chance.' --exact --attempts 2; then break; fi
 done
 python scripts/check-android-screen.py 'A second chance.' --exact
-python scripts/check-android-screen.py '' --class-name android.widget.CheckBox --tap
+python scripts/check-android-screen.py 'Select Sift-release-fixture.txt' --description --exact --tap
 python scripts/check-android-screen.py 'Restore' --tap --exact
 python scripts/check-android-screen.py 'Restore files' --tap --exact
 python scripts/check-android-screen.py '1 file restored'
