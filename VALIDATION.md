@@ -72,3 +72,12 @@ physical erasure from flash or synchronized copies. See docs/ANDROID.md.
   selection retention plus cleanup review. No user data is used.
 - Decode limits and private memory caches keep previews separate from the scan.
   A preview is a cached snapshot, not proof that a file is safe to delete.
+
+Release evidence: [desktop build and safety gates](https://github.com/sarvesh-kr/sift/actions/runs/39027533561)
+passed for desktop source `478117f042bd391ffc0bbb4a327ba7936b6a36aa`.
+All fifteen Android instrumented checks passed on both API 30 and API 36 in
+[the Android build](https://github.com/sarvesh-kr/sift/actions/runs/39028021603),
+including actual PNG/video/PDF previews and native layout/selection behavior.
+The optimized APK additionally passed [cleanup and restore after reboot](https://github.com/sarvesh-kr/sift/actions/runs/39028282583).
+Android APK source is `e9ba6d6f60a2bd98fff82b59182e62d29b413e35`; the signed
+public APK uses the original Sift certificate and version code 2.
