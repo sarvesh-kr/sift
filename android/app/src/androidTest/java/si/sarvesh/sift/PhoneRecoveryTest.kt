@@ -23,7 +23,7 @@ class PhoneRecoveryTest {
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private fun fixture(parent: File = Environment.getExternalStorageDirectory()): File {
-        val root = File(parent, "Sift-phone-test-${UUID.randomUUID()}")
+        val root = File(parent, "Sift-phone-test-${UUID.randomUUID()}").canonicalFile
         root.mkdirs()
         context.assets.open("sample.img").use { input ->
             File(root, ".cache")
