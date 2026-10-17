@@ -20,7 +20,7 @@ Installers and archives are attached to tagged preview releases after every plat
 
 Version **0.2.0** adds an explanation-based Cleanup Center, folder drill-down, volume capacity and available-space readings, staged duplicate comparison with separate byte verification, and retained-copy protection. See [the competitive goals and benchmark gates](PRODUCT-GOALS.md) for the path toward a leading storage-cleanup product. No superiority over commercial cleaners has been established.
 
-Version **0.2.1** replaces Windows cleanup's generic “Some operations were aborted” error with explicit Recycle Bin operations, per-file Windows error codes and actionable hints, persistent cleanup results, and progress. Files are only counted as recycled after the Shell confirms a destination in the bin and the original path is absent. Successful files leave the selection; unconfirmed files stay in review. Windows runtime regression tests recycle and restore disposable fixtures and cover locked files without permanent-delete fallbacks.
+Version **0.3.0** adds three explicit cleanup actions: Recycle Bin / trash (default), permanent deletion, and best-effort overwrite-and-delete. Apply them to one file, a selection, or all matches in the current filtered view, including unloaded rows. Permanent actions require typing the exact action and file count; removing all known duplicate copies also requires a separate acknowledgment. Windows recycling retains the isolated STA Shell worker, per-file errors, and verified bin destination from 0.2.1. Recycling never falls back to permanent deletion.
 
 ## What works
 
@@ -33,7 +33,9 @@ Version **0.2.1** replaces Windows cleanup's generic “Some operations were abo
 - Choose a retained copy in each duplicate group and add only extras to review. Native cleanup independently validates a remaining copy and byte-compares it before moving a duplicate.
 - Find content duplicates with size prefiltering, sampled-content prefiltering, streaming BLAKE3 hashing, and separate full byte comparisons. Hard links are excluded from duplicate-copy estimates where file identity is available; empty files are excluded.
 - Inspect full paths and metadata; select files and review them before cleanup.
-- Move selected files to the operating system's trash. There is no permanent-delete fallback.
+- Recycle selected files by default, or explicitly choose permanent deletion or overwrite-and-delete.
+- Revalidate the scanned file identity and metadata before cleanup. Wipe performs one logical zero pass, flushes, verifies every byte, then deletes; it refuses hard links and Windows reparse/cloud, compressed, sparse, or encrypted files. Stop is available for permanent actions; any failed overwrite requires a new scan.
+- Overwrite is **not certified media sanitization**: SSD wear leveling, copy-on-write, snapshots, backups, and synced copies may retain data. Sift cannot undo irreversible actions. Unix path operations cannot eliminate every race with unrelated processes; avoid concurrent file changes during cleanup.
 - Export a JSON inventory and persist the reduced-motion preference.
 
 The desktop app initially shows a clearly labeled sample workspace. **Scan a folder** replaces the sample data with a real local scan. The browser preview uses sample data only and never modifies real files.
@@ -102,11 +104,11 @@ npx playwright install chromium
 npm run test:ui
 ```
 
-Rust tests exercise nested scanning, categorization, content-based duplicate detection, cancellation, hard-link handling, changed-file rejection, symlink redirection, and trash failures without permanently deleting files. Frontend tests cover folder-boundary accounting, recommendation explanations, credential-pattern exclusions, duplicate selection, navigation, search, cleanup review, sample-only removal, preference persistence, responsive layout, and keyboard focus.
+Rust tests exercise nested scanning, categorization, content-based duplicate detection, cancellation, hard-link handling, changed-file rejection, symlink redirection, and trash failures without deletion fallback, and explicit permanent deletion/overwrite on disposable test fixtures. Frontend tests cover folder-boundary accounting, recommendation explanations, credential-pattern exclusions, duplicate selection, navigation, search, cleanup review, sample-only removal, preference persistence, responsive layout, and keyboard focus.
 
 ## Storage-cleanup product goals
 
-[PRODUCT-GOALS.md](PRODUCT-GOALS.md) records the official comparison sources, delivered behavior, remaining engineering milestones, and release gates for meaningful superiority claims. This release does not implement an NTFS MFT engine, a disk-backed inventory, application-specific browser/OS cache cleaners, permanent deletion, in-app restore, or similar-image detection.
+[PRODUCT-GOALS.md](PRODUCT-GOALS.md) records the official comparison sources, delivered behavior, remaining engineering milestones, and release gates for meaningful superiority claims. This release does not implement an NTFS MFT engine, a disk-backed inventory, application-specific browser/OS cache cleaners, certified media sanitization, in-app restore, or similar-image detection.
 
 ## Scope and practical limits
 

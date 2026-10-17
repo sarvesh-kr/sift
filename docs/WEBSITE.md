@@ -2,9 +2,10 @@
 
 The public marketing and download site is **https://sift.sarvesh.si**, hosted on
 GitHub Pages from this repository. It is separate from the desktop React app.
-Cloudflare provides DNS and the edge proxy, with a proxied CNAME from
-`sift.sarvesh.si` to `sarvesh-kr.github.io`. GitHub Pages serves the site; Cloudflare
-redirects HTTP visitors to HTTPS and verifies the origin using Full (strict) TLS.
+Cloudflare provides DNS, with a **DNS-only** (unproxied) CNAME from
+`sift.sarvesh.si` to `sarvesh-kr.github.io`. GitHub Pages terminates HTTPS directly.
+DNS-only exposes the required CNAME for GitHub domain verification and certificate
+provisioning. Do not enable Cloudflare proxying while validating this domain.
 
 ## Edit and preview
 
@@ -56,19 +57,15 @@ GitHub Pages settings must retain **GitHub Actions** as the source and
 source. The `github-pages` environment is the deployment target. The workflow
 checks the live HTTPS page after deployment.
 
-Two Cloudflare rules apply only to `sift.sarvesh.si`:
+GitHub has approved the TLS certificate for `sift.sarvesh.si` (verified through
+its Pages API), and HTTPS returns the site with certificate verification enabled.
+The available integration cannot update Pages repository settings (HTTP 403).
+The repository owner should enable **Settings → Pages → Enforce HTTPS** now that
+the certificate is approved; until enabled, GitHub also serves plain HTTP.
 
-- **Sift HTTPS redirect**, phase `http_request_dynamic_redirect`: match
-  `(http.host eq "sift.sarvesh.si" and not ssl)`, then 301 redirect to
-  `concat("https://sift.sarvesh.si", http.request.uri.path)` while preserving the
-  query string.
-- **Sift origin TLS**, phase `http_config_settings`: match
-  `(http.host eq "sift.sarvesh.si")` and set `ssl` to `strict`.
-
-GitHub accepts deployment tokens but rejects updating its **Enforce HTTPS**
-repository setting through the available integrations. HTTPS redirects are
-therefore handled by Cloudflare; the site does not depend on changing that
-GitHub setting. Keep the Sift DNS record proxied for these rules to apply.
+Previous host-specific Cloudflare redirect and strict-origin rules are inactive
+because this record is DNS-only. They are not a substitute for GitHub's native
+HTTPS setting and do not affect other subdomains.
 
 ## Screenshots and fonts
 

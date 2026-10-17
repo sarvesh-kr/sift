@@ -1,4 +1,4 @@
-use sift_core::{DuplicateResult, ScanReport, TrashResult};
+use sift_core::{CleanupMode, CleanupResult, DuplicateResult, ScanReport, TrashResult};
 use std::{
     path::PathBuf,
     sync::{
@@ -15,6 +15,7 @@ struct Session {
     report: Mutex<Option<ScanReport>>,
     busy: AtomicBool,
     cancel: AtomicBool,
+    needs_rescan: AtomicBool,
 }
 
 struct BusyGuard(Arc<Session>);
@@ -81,6 +82,7 @@ async fn scan_directory(
             let _ = app.emit("scan-progress", progress);
         })?;
         *session.report.lock().map_err(|error| error.to_string())? = Some(report.clone());
+        session.needs_rescan.store(false, Ordering::Release);
         Ok(report)
     })
     .await
@@ -99,6 +101,11 @@ async fn find_duplicates(
 ) -> Result<DuplicateResult, String> {
     let session = Arc::clone(session.inner());
     let guard = lock_work(&session)?;
+    if session.needs_rescan.load(Ordering::Acquire) {
+        return Err(
+            "Rescan after an incomplete overwrite before comparing or cleaning up files.".into(),
+        );
+    }
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         // Move the existing report out while busy to avoid duplicating a large scan.
@@ -125,17 +132,55 @@ async fn trash_files(
     paths: Vec<String>,
     session: State<'_, Arc<Session>>,
 ) -> Result<TrashResult, String> {
+    cleanup_files(
+        app,
+        paths,
+        CleanupMode::Recycle,
+        String::new(),
+        false,
+        session,
+    )
+    .await
+    .map(|result| result.outcome)
+}
+
+#[tauri::command]
+async fn cleanup_files(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    mode: CleanupMode,
+    confirmation: String,
+    allow_all_copies: bool,
+    session: State<'_, Arc<Session>>,
+) -> Result<CleanupResult, String> {
     let session = Arc::clone(session.inner());
     let guard = lock_work(&session)?;
+    if session.needs_rescan.load(Ordering::Acquire) {
+        return Err(
+            "A previous overwrite was not fully completed. Rescan before any further cleanup."
+                .into(),
+        );
+    }
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = guard;
         let mut locked = session.report.lock().map_err(|error| error.to_string())?;
         let report = locked.as_mut().ok_or("Scan a folder first.")?;
-        let result = sift_core::trash_selected_with_progress(report, &paths, |progress| {
-            let _ = app.emit("scan-progress", progress);
-        });
-        report.volume = result.volume.clone();
-        let removed: std::collections::HashSet<&String> = result.removed.iter().collect();
+        let result = sift_core::cleanup_selected_with_cancel(
+            report,
+            &paths,
+            mode,
+            &confirmation,
+            allow_all_copies,
+            &session.cancel,
+            |progress| {
+                let _ = app.emit("scan-progress", progress);
+            },
+        )?;
+        if result.rescan_required {
+            session.needs_rescan.store(true, Ordering::Release);
+        }
+        report.volume = result.outcome.volume.clone();
+        let removed: std::collections::HashSet<&String> = result.outcome.removed.iter().collect();
         report.files.retain(|file| !removed.contains(&file.path));
         let mut group_counts = std::collections::HashMap::new();
         for file in &report.files {
@@ -203,6 +248,7 @@ pub fn run() {
             cancel_scan,
             find_duplicates,
             trash_files,
+            cleanup_files,
             export_report
         ])
         .run(tauri::generate_context!())

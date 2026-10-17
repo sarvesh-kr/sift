@@ -9,6 +9,12 @@ use std::{
 };
 use walkdir::WalkDir;
 
+mod cleanup;
+pub use cleanup::{
+    cleanup_selected_with_cancel, cleanup_selected_with_progress, confirmation_phrase, CleanupMode,
+    CleanupResult,
+};
+
 #[cfg(windows)]
 mod windows_trash;
 
@@ -237,7 +243,7 @@ pub fn validate_candidate(root: &Path, entry: &FileEntry) -> Result<PathBuf, Str
     }
     let meta = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
     if !meta.is_file() || meta.file_type().is_symlink() {
-        return Err("Only regular, scanned files can be moved to trash.".into());
+        return Err("Only regular, scanned files can be cleaned up.".into());
     }
     if meta.len() != entry.size
         || modified_nanos(&meta) != entry.modified_nanos
@@ -541,6 +547,24 @@ fn trash_selected_using(
     mut move_to_trash: impl FnMut(&Path) -> Result<(), String>,
     mut progress: impl FnMut(Progress),
 ) -> TrashResult {
+    process_selected(
+        report,
+        paths,
+        false,
+        &AtomicBool::new(false),
+        &mut move_to_trash,
+        &mut progress,
+    )
+}
+
+fn process_selected(
+    report: &ScanReport,
+    paths: &[String],
+    allow_all_copies: bool,
+    cancel: &AtomicBool,
+    mut operation: impl FnMut(&Path) -> Result<(), String>,
+    mut progress: impl FnMut(Progress),
+) -> TrashResult {
     let index: HashMap<&str, &FileEntry> = report
         .files
         .iter()
@@ -582,8 +606,15 @@ fn trash_selected_using(
             .get(path.as_str())
             .ok_or_else(|| "This file was not in the current scan.".to_owned())
             .and_then(|file| {
+                if cancel.load(Ordering::Relaxed) {
+                    return Err("Cleanup stopped before this file was changed.".into());
+                }
                 let safe_path = validate_candidate(Path::new(&report.root), file)?;
-                if let Some(group) = file.duplicate_group.as_deref() {
+                if let Some(group) = file
+                    .duplicate_group
+                    .as_deref()
+                    .filter(|_| !allow_all_copies)
+                {
                     let keeper = keepers
                         .get(group)
                         .ok_or("Keep at least one unchanged copy of each duplicate group.")?;
@@ -592,7 +623,7 @@ fn trash_selected_using(
                         Path::new(&report.root),
                         file,
                         keeper,
-                        &AtomicBool::new(false),
+                        cancel,
                         &mut stats,
                         &mut |_| {},
                     )? {
@@ -601,7 +632,7 @@ fn trash_selected_using(
                 }
                 Ok(safe_path)
             })
-            .and_then(|safe_path| move_to_trash(&safe_path));
+            .and_then(|safe_path| operation(&safe_path));
         match operation {
             Ok(()) => result.removed.push(path.clone()),
             Err(error) => result.failed.push(TrashFailure {

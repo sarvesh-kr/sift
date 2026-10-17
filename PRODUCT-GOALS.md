@@ -21,7 +21,7 @@ These are product-documentation comparisons, not independently measured performa
 | Duplicate pipeline | Same-size candidate filtering → sampled-content filtering → complete BLAKE3 hashing → separate byte verification. Hard-link identities are excluded where available. |
 | Retained copy | Choose a keeper and select extras. Both UI review and the native cleanup path prevent removal of every detected copy. The retained copy is revalidated and byte-compared before each duplicate is moved. |
 | Volume context | Total and available space for the scanned folder's host volume, refreshed after cleanup. Logical inventory sizes remain separately labeled. |
-| Privacy and deletion | No upload or account. Explicit selection and review, OS trash, changed-file checks, and no app-level permanent-delete fallback. |
+| Privacy and deletion | No upload or account. Explicit selection and review, default OS trash with no deletion fallback, typed confirmation for permanent actions, changed-file checks, and best-effort overwrite with read-back verification. |
 
 ## Next engineering milestones
 

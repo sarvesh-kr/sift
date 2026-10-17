@@ -1,8 +1,10 @@
-Sift is a local desktop storage explorer and cleanup assistant. This preview includes an explanation-based Cleanup Center, folder drill-down, exact duplicate comparison, retained-copy protection, and system-trash cleanup.
+Sift is a local desktop storage explorer and cleanup assistant. This preview includes an explanation-based Cleanup Center, folder drill-down, exact duplicate comparison, retained-copy protection, and explicit cleanup actions.
 
-**0.2.1 cleanup fix:** Windows now uses an isolated STA worker and explicit Recycle Bin operations instead of the dependency that reduced failures to “Some operations were aborted.” Each file reports its own Windows error code and recovery hint. A skipped operation is never counted as a successful recycle. Permanent-delete requests are blocked. Successful files leave the selection; failed or unconfirmed files retain their full-path results for review. Cleanup progress is shown, and unrelated duplicate groups are no longer revalidated on each cleanup.
+**0.3.0 cleanup actions:** choose Recycle Bin / trash (default), permanent deletion, or best-effort overwrite-and-delete for one file, multiple files, or all matches in a filtered view. Permanent actions require an exact typed action and file count. Removing every known duplicate copy requires an additional explicit acknowledgment.
 
-Windows CI now recycles and restores disposable fixture files with Unicode names, checks that a locked file does not block the next file, and exercises the permanent-delete callback guard. These tests also run on ordinary pushes and pull requests.
+Overwrite uses one zero pass, flushes, reads every byte back, then deletes the validated file. It refuses hard links and Windows reparse/cloud, compressed, sparse, or encrypted files. Permanent actions can be stopped; an incomplete overwrite may leave altered contents and requires a fresh scan before any further cleanup. This is not certified erasure of SSD/flash, copy-on-write storage, snapshots, backups, or synced copies.
+
+The Windows 0.2.1 Recycle Bin fix is included: an isolated STA worker, explicit recycle-only Shell flags, per-file Windows errors, persistent results, and no permanent-delete fallback. Windows tests recycle and restore isolated fixtures, handle locked files, and reject callbacks requesting permanent deletion. New cross-platform fixtures verify permanent deletion, overwrite read-back, cancellation, exact confirmations, changed-file and hard-link rejection, and explicit all-copy acknowledgment.
 
 Choose the download for your computer:
 
