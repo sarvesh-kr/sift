@@ -62,10 +62,9 @@ class StorageEngineTest {
         assertEquals(1,clean(engine,setOf(file.path),Action.TRASH).failed.size)
         assertEquals("keep",outside.readText())
     }
-    @Test fun duplicatesKeepOneUnlessExplicitlyConfirmedAndHardLinksAreExcluded() = fixture {root,_,_,engine ->
+    @Test fun duplicatesKeepOneUnlessExplicitlyConfirmed() = fixture {root,_,_,engine ->
         val one=File(root,"one").apply{writeBytes(ByteArray(600_123){it.toByte()})}
         val two=File(root,"two").apply{writeBytes(one.readBytes())}
-        Os.link(one.path,File(root,"hardlink").path)
         scan(engine); val compared=engine.compare{_,_->}
         val duplicates=compared.files.filter{it.group!=null}
         assertEquals(2,duplicates.size)
@@ -74,7 +73,7 @@ class StorageEngineTest {
         assertEquals(2,clean(engine,paths,Action.DELETE,"DELETE 2 FILES").failed.size)
         val removed=clean(engine,paths,Action.DELETE,"DELETE 2 FILES",true)
         assertEquals(2,removed.removed.size)
-        assertTrue(listOf(one,two,File(root,"hardlink")).count{it.exists()}==1)
+        assertFalse(one.exists()); assertFalse(two.exists())
     }
     @Test fun cancellationDoesNotChangeTheNextFile() = fixture {root,_,_,engine ->
         val file=File(root,"keep").apply{writeText("keep")}; scan(engine); engine.cancel.set(true)

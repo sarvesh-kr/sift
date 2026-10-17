@@ -19,4 +19,13 @@ class ModelTest {
         assertEquals("a", clearSingletons(listOf(a,b))[0].group)
         assertNull(clearSingletons(listOf(a))[0].group)
     }
+    @Test fun aliasPathsDoNotCreateDuplicateCandidatesAndEmptyFilesAreExcluded() {
+        val original=Entry("/one","one",123,0,1,42)
+        val alias=original.copy(path="/alias",name="alias")
+        val independent=original.copy(path="/two",name="two",inode=43)
+        assertTrue(duplicateCandidates(listOf(original,alias)).isEmpty())
+        val candidates=duplicateCandidates(listOf(original,alias,independent,original.copy(path="/empty",size=0)))
+        assertEquals(1,candidates.size)
+        assertEquals(setOf("/one","/two"),candidates.single().map{it.path}.toSet())
+    }
 }

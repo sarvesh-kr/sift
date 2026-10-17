@@ -74,9 +74,9 @@ class StorageEngine(private val context: Context,
         require(now.copy(group = entry.group) == entry) { "File changed since scanning. Rescan before cleanup." }
         return file
     }
-    private fun stopped() { check(!cancel.get()) { "Stopped before this file was changed." } }
-    private fun open(entry: Entry): FileInputStream {
-        unchanged(entry)
+    private fun stopped() { check(!cancel.get()) { "Cleanup stopped. Completed moves remain available in Sift trash." } }
+    private fun open(entry: Entry, inTrash: Boolean = false): FileInputStream {
+        unchanged(entry, inTrash)
         val fd = Os.open(entry.path, OsConstants.O_RDONLY or OsConstants.O_NOFOLLOW or OsConstants.O_CLOEXEC, 0)
         try {
             val st = Os.fstat(fd)
@@ -118,30 +118,32 @@ class StorageEngine(private val context: Context,
         unchanged(entry)
         return md.digest().joinToString("") { "%02x".format(it) }
     }
+    private fun streamsEqual(left: FileInputStream, right: FileInputStream, length: Long): Boolean {
+        val x = ByteArray(256 * 1024); val y = ByteArray(x.size)
+        var remaining = length
+        while (remaining > 0) {
+            stopped()
+            val count = minOf(remaining, x.size.toLong()).toInt()
+            fun readBlock(input: FileInputStream, buffer: ByteArray) {
+                var read = 0
+                while (read < count) { val n = input.read(buffer, read, count-read); check(n > 0) { "File changed during comparison." }; read += n }
+            }
+            readBlock(left, x); readBlock(right, y)
+            for (i in 0 until count) if (x[i] != y[i]) return false
+            remaining -= count
+        }
+        check(left.read() == -1 && right.read() == -1) { "File changed during comparison." }
+        return true
+    }
     private fun same(a: Entry, b: Entry): Boolean {
         if (a.size != b.size) return false
-        open(a).use { left -> open(b).use { right ->
-            val x = ByteArray(256 * 1024); val y = ByteArray(x.size)
-            var remaining = a.size
-            while (remaining > 0) {
-                stopped()
-                val count = minOf(remaining, x.size.toLong()).toInt()
-                fun readBlock(input: FileInputStream, buffer: ByteArray) {
-                    var read = 0
-                    while (read < count) { val n = input.read(buffer, read, count-read); check(n > 0) { "File changed during comparison." }; read += n }
-                }
-                readBlock(left, x); readBlock(right, y)
-                for (i in 0 until count) if (x[i] != y[i]) return false
-                remaining -= count
-            }
-            check(left.read() == -1 && right.read() == -1) { "File changed during comparison." }
-        } }
+        val equal = open(a).use { left -> open(b).use { right -> streamsEqual(left, right, a.size) } }
         unchanged(a); unchanged(b)
-        return true
+        return equal
     }
     @Synchronized fun compare(progress: (Int, String) -> Unit): Inventory {
         val groups = mutableMapOf<String, String>()
-        val candidates = inventory.files.filter { it.size > 0 }.distinctBy { it.device to it.inode }.groupBy { it.size }.values.filter { it.size > 1 }
+        val candidates = duplicateCandidates(inventory.files)
         var processed = 0; var skipped = 0
         outer@ for (candidatesBySize in candidates) {
             val hashes = mutableMapOf<String, MutableList<Entry>>()
@@ -221,16 +223,28 @@ class StorageEngine(private val context: Context,
         safeDirectories()
         val id = UUID.randomUUID().toString(); val destination = File(bin, id)
         val json = JSONObject().put("id", id).put("original", encode(entry)).put("trashedAt", System.currentTimeMillis())
-        // Durable intent before atomic rename: a crash cannot leave an unindexed moved file.
-        writeIndex(id, json)
-        if (!file.renameTo(destination)) {
-            AtomicFile(File(index, "$id.json")).delete()
-            error("Could not move to Sift trash. No permanent-delete fallback was attempted.")
+        // Hold the validated source object across rename. Android's media FUSE
+        // layer may change timestamps or expose a different identity in app data.
+        open(entry).use { source ->
+            writeIndex(id, json)
+            if (!file.renameTo(destination)) {
+                AtomicFile(File(index, "$id.json")).delete()
+                error("Could not move to Sift trash. No permanent-delete fallback was attempted.")
+            }
+            check(!file.exists() && destination.isFile) { "Move not confirmed. Check Sift trash before retrying." }
+            val stored = checked(destination)
+            val held = Os.fstat(source.fd)
+            require(stored.size == entry.size && held.st_size == entry.size) { "Moved file size changed. Check Sift trash before retrying." }
+            if (stored.device != held.st_dev || stored.inode != held.st_ino) {
+                // Only the identity-changing case needs a full read. Most moves
+                // stay fast and validate the same open filesystem object.
+                open(stored, true).use { target ->
+                    require(streamsEqual(source, target, entry.size)) { "Moved file contents differ. File retained in Sift trash." }
+                }
+            }
+            unchanged(stored, true)
+            writeIndex(id, json.put("stored", encode(stored)))
         }
-        check(!file.exists() && destination.isFile) { "Move not confirmed. Check Sift trash before retrying." }
-        val stored = checked(destination)
-        require(stored.size == entry.size && stored.modified == entry.modified) { "Moved file differs. Check Sift trash before retrying." }
-        writeIndex(id, json.put("stored", encode(stored)))
     }
     @Synchronized fun trash(): List<TrashEntry> {
         unreadableTrashRecords = 0
@@ -246,7 +260,7 @@ class StorageEngine(private val context: Context,
                 val destination = File(bin, id)
                 if (!destination.exists()) return@runCatching null
                 val stored = if (json.has("stored")) decode(json.getJSONObject("stored")) else checked(destination)
-                require(stored.path == destination.path && stored.size == original.size && stored.modified == original.modified)
+                require(stored.path == destination.path && stored.size == original.size)
                 unchanged(stored, true)
                 TrashEntry(id, original, stored, json.getLong("trashedAt"))
             }.getOrElse { unreadableTrashRecords++; null }
@@ -284,3 +298,7 @@ fun clearSingletons(files: List<Entry>): List<Entry> {
     val counts = files.mapNotNull { it.group }.groupingBy { it }.eachCount()
     return files.map { if (it.group != null && counts[it.group] == 1) it.copy(group = null) else it }
 }
+
+/** Empty files and multiple names for one filesystem object are not extra copies. */
+fun duplicateCandidates(files: List<Entry>): List<List<Entry>> = files.filter { it.size > 0 }
+    .distinctBy { it.device to it.inode }.groupBy { it.size }.values.filter { it.size > 1 }

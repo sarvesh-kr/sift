@@ -33,12 +33,12 @@ See README.md for reproduction steps and PRODUCT-GOALS.md for benchmark gates.
 
 ## Android 0.1.0 release gates
 
-- Release APK compilation and resource/code shrinking, Android lint, and three
+- Release APK compilation and resource/code shrinking, Android lint, and four
   model regressions for extension categorization, exact typed confirmations, and
-  duplicate singleton cleanup.
+  duplicate singleton cleanup, and file-identity alias exclusion.
 - Eleven instrumented checks on Android 11/API 30 and Android 16/API 36 emulators:
   protected-folder and symlink exclusion, changed-file rejection, exact
-  confirmation and scan allowlists, duplicate-copy protection and hard links,
+  confirmation and scan allowlists, duplicate-copy protection,
   cancellation, Unicode trash/restore, collision refusal, persistence, interrupted
   journal recovery, corrupt-record preservation, actual shared-storage moves into
   app-owned trash, and native Compose navigation.
