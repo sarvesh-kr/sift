@@ -195,6 +195,7 @@ internal fun RecoveryScreen(
     var category by rememberSaveable { mutableStateOf("All") }
     var help by remember { mutableStateOf(false) }
     var rootReview by remember { mutableStateOf(false) }
+    var folderHelp by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf<RecoveryFile?>(null) }
     var review by rememberSaveable { mutableStateOf<List<String>?>(null) }
     var advanced by rememberSaveable { mutableStateOf(false) }
@@ -426,8 +427,34 @@ internal fun RecoveryScreen(
                     RecoveryPanel(
                         "SAVED COPIES",
                         "${result.exported.size} verified ${if(result.exported.size==1)"copy" else "copies"} saved${if(result.cancelled)" · stopped" else ""}",
-                        result.directory,
+                        "Saved in " +
+                            (Uri.parse(result.directory)
+                                .lastPathSegment
+                                ?.substringAfterLast('/')
+                                ?.takeIf { it.startsWith("Sift-recovered-") }
+                                ?: "your selected recovery folder"),
                     ) {
+                        TextButton(
+                            onClick = {
+                                runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW)
+                                                .setDataAndType(
+                                                    Uri.parse(result.directory),
+                                                    "vnd.android.document/directory",
+                                                )
+                                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        )
+                                    }
+                                    .onFailure { folderHelp = true }
+                            }
+                        ) {
+                            Text("Open recovered files")
+                        }
+                        if (folderHelp)
+                            RecoveryNote(
+                                "Open your Files app and find the Sift-recovered folder in the destination you selected."
+                            )
                         RecoveryNote(
                             if (result.manifest != null)
                                 "recovery-manifest.json records offsets, evidence, SHA-256 hashes, and per-file outcomes."

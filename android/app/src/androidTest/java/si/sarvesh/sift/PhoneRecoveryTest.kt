@@ -22,9 +22,8 @@ class PhoneRecoveryTest {
     private val context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private fun fixture(): File {
-        val root =
-            File(Environment.getExternalStorageDirectory(), "Sift-phone-test-${UUID.randomUUID()}")
+    private fun fixture(parent: File = Environment.getExternalStorageDirectory()): File {
+        val root = File(parent, "Sift-phone-test-${UUID.randomUUID()}")
         root.mkdirs()
         context.assets.open("sample.img").use { input ->
             File(root, ".cache")
@@ -98,7 +97,9 @@ class PhoneRecoveryTest {
 
     @Test
     fun phoneRecoverySkipsVisibleFoldersBinsAndLinksAndRejectsChangedSources() {
-        val root = fixture()
+        // FUSE shared storage forbids symlink creation. Exercise no-follow on
+        // an app-owned ext4 fixture using the same recovery reader.
+        val root = fixture(context.cacheDir)
         try {
             val cache = File(root, ".cache/thumbnail-database")
             File(root, "Visible").mkdir()
