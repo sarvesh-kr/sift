@@ -44,7 +44,13 @@ if [ "$booted" != 1 ]; then exit 1; fi
 adb shell input keyevent KEYCODE_MENU
 adb shell wm dismiss-keyguard
 adb shell am start -n si.sarvesh.sift/.MainActivity
-python scripts/check-android-screen.py 'Trash' --tap --exact
+# Input focus can settle after boot_completed; prove that navigation reached
+# the destination screen instead of treating a delivered tap as success.
+for attempt in 1 2 3; do
+  python scripts/check-android-screen.py 'Trash' --tap --exact
+  if python scripts/check-android-screen.py 'A second chance.' --exact --attempts 2; then break; fi
+done
+python scripts/check-android-screen.py 'A second chance.' --exact
 python scripts/check-android-screen.py '' --class-name android.widget.CheckBox --tap
 python scripts/check-android-screen.py 'Restore' --tap --exact
 python scripts/check-android-screen.py 'Restore files' --tap --exact
