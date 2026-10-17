@@ -83,7 +83,7 @@ The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-speci
 
 ## Android phones
 
-<img src="artifacts/sift-android.png" width="320" alt="Native Sift Android storage overview on an Android emulator" />
+<img src="artifacts/sift-android.png" width="320" alt="Clean data and Recover data choices in the optimized Android release on an emulator" />
 
 Download the signed APK from [the website](https://sift.sarvesh.si/#download) or
 [Android releases](https://github.com/sarvesh-kr/sift/releases?q=android).

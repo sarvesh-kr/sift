@@ -126,3 +126,5 @@ state retention, native command arguments, filters, one-file export, and focus.
 Emulators, fixtures, and browser tests do not establish physical-device recovery
 rates, OEM compatibility, full desktop GUI qualification, or competitive recovery
 benchmarks. See [validation records](../VALIDATION.md) and [product goals](../PRODUCT-GOALS.md).
+
+<img src="../artifacts/sift-android-recovery.png" width="320" alt="The optimized Android recovery workspace on an emulator, before choosing an image" />

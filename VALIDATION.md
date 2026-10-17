@@ -13,10 +13,10 @@ source commit. See GitHub Actions for the recorded outcome on each runner.
   contents, handle a locked file followed by a recyclable file, and refuse a
   callback requesting deletion without recycling. Fixture filtering uses the
   unique test directory; no unrelated Recycle Bin items are modified.
-- **21 frontend checks:** storage analysis and review flows, keyboard focus,
+- **26 frontend checks:** storage analysis and review flows, keyboard focus,
   responsive layout, and mocked native partial/zero-success cleanup. These verify
   that per-file errors persist, successful files are excluded from a retry, typed confirmations reset with selection changes, single-file and filtered all-match selection work, and incomplete overwrites block cleanup until rescanning.
-- **Five website checks:** release links, Mac architecture selection, previews,
+- **Six website checks:** release links, Mac architecture selection, previews,
   narrow layouts, Android APK recommendations and install instructions, and download operation without JavaScript.
 - TypeScript, Vite, Rust formatting, and Windows-target compilation checks.
 - Native installer builds for Windows x64, Linux x64, and both Mac architectures.
@@ -109,3 +109,36 @@ opens: failure cleanup cannot delete an unverified destination/source alias.
 Permission-free recovery is tested in its own process started with access denied;
 permission changes occur only between instrumentation invocations. Lazy-grid UI
 checks scroll the container to uncomposed results before interacting with them.
+
+## Published recovery preview release records
+
+- **Desktop 0.5.0**, source `bdfd063cdfeee81b80cca3a0119ebb77b90a6762`:
+  [all four platform builds and release](https://github.com/sarvesh-kr/sift/actions/runs/39033097564)
+  passed. The native suite passed 35 tests on Windows and 33 on Linux; the build
+  job also ran native tests on both Mac architectures. All 26 interface checks
+  passed. The ten package/build-record hashes match GitHub's uploaded asset
+  digests, and all four build records identify this source commit.
+- **Android 0.3.0**, source `e1c75c13276c255675855299b0e4bacf0ceb83ee`:
+  [release build, lint, 11 JVM tests, and device gates](https://github.com/sarvesh-kr/sift/actions/runs/39034081538)
+  passed. API 30 and API 36 each passed 20 main instrumented checks plus one
+  separate check with All files access already denied. SAF copies, correct
+  document MIME types, destination corruption, writable/read-only source aliases,
+  visual selection, and existing cleanup/trash regressions were exercised.
+- The [optimized APK smoke](https://github.com/sarvesh-kr/sift/actions/runs/39034259498)
+  passed both workspace screens while access was denied, then scan, details,
+  cleanup review, trash, full OS reboot, restore, and exact restored bytes.
+  Screenshots in `artifacts/sift-android.png` and
+  `artifacts/sift-android-recovery.png` come from this optimized build's emulator.
+- [Signed attachment verification](https://github.com/sarvesh-kr/sift/actions/runs/39034643135)
+  confirmed that every signed APK ZIP entry matches the tested CI build. The
+  published APK uses the existing Sift certificate, version code 3, no internet
+  permission, all four universal ABIs, and 16 KiB native/ZIP alignment. Test
+  provider/fixture exclusion, APK certificate, checksums, and exact source were
+  separately verified. The published three asset digests match the signed local
+  APK, build record, and checksum file. Private signing material was not uploaded.
+- Website gates run four Python release-builder guards and six browser checks,
+  covering complete downloads, platform recommendations, responsive and
+  JavaScript-free use, workspace information, and honest recovery limitations.
+
+These are automated fixture/emulator checks, not physical-device recovery rates,
+full desktop interaction qualification, or a commercial recovery benchmark.
