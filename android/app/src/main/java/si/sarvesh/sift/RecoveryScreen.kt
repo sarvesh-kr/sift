@@ -223,6 +223,7 @@ internal fun RecoveryScreen(
     LaunchedEffect(state.session) {
         query = ""
         category = "All"
+        folderHelp = false
     }
     val visible =
         remember(state.report, query, category) {
@@ -628,7 +629,7 @@ internal fun RecoveryScreen(
                         review = listOf(file.id)
                         details = null
                     },
-                    enabled = !state.busy,
+                    enabled = !state.busy && file.recoverable,
                 ) {
                     Text("Recover this file only")
                 }

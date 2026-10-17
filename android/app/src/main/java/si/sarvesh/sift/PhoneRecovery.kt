@@ -74,9 +74,9 @@ internal class PhoneRecoveryReader(root: File, private val label: String = "Sele
             check(same(before, Os.fstat(fd)) && OsConstants.S_ISREG(before.st_mode)) {
                 "Recovery source changed. Scan again."
             }
-            return FileInputStream(fd)
+            return takeReadDescriptor(fd)
         } catch (e: Exception) {
-            Os.close(fd)
+            if (fd.valid()) Os.close(fd)
             throw e
         }
     }
@@ -144,7 +144,13 @@ internal class PhoneRecoveryReader(root: File, private val label: String = "Sele
                 }
             }
             progress(
-                RecoveryProgress(visited.toLong(), 0, 0, "Finding shared cache and hidden folders")
+                RecoveryProgress(
+                    visited.toLong(),
+                    0,
+                    0,
+                    "Finding shared cache and hidden folders",
+                    "entries",
+                )
             )
             if (visited > 100_000) break
         }

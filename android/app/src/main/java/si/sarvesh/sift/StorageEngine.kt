@@ -81,8 +81,8 @@ class StorageEngine(private val context: Context,
         try {
             val st = Os.fstat(fd)
             require(st.st_dev == entry.device && st.st_ino == entry.inode && st.st_size == entry.size && OsConstants.S_ISREG(st.st_mode)) { "Opened file differs from inventory." }
-            return FileInputStream(fd)
-        } catch (e: Exception) { Os.close(fd); throw e }
+            return takeReadDescriptor(fd)
+        } catch (e: Exception) { if(fd.valid()) Os.close(fd); throw e }
     }
     @Synchronized fun scan(progress: (Int, String) -> Unit): Inventory {
         val start = System.nanoTime()
