@@ -34,19 +34,21 @@ class PhoneUiTest {
             compose.onNodeWithText("Search files").performTextInput(file.name)
             compose.runOnIdle { (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0) }
             compose.onNodeWithText("Grid view").performScrollTo().performClick()
-            compose.onNodeWithContentDescription("Select ${file.name}").performScrollTo().performClick()
+            compose.onNodeWithContentDescription("Select ${file.name}",useUnmergedTree=true).performScrollTo().performClick()
             compose.runOnIdle {
                 androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()?.let { screenshot ->
                     java.io.File(context.externalCacheDir,"sift-grid.png").outputStream().use{screenshot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};screenshot.recycle()
                 }
             }
             compose.onNodeWithText("List view").performScrollTo().performClick()
-            compose.onNodeWithContentDescription("Select ${file.name}").performScrollTo().assertIsOn()
-            compose.waitUntil(10_000){compose.onAllNodesWithContentDescription("Preview of ${file.name}").fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithContentDescription("Select ${file.name}",useUnmergedTree=true).performScrollTo().assertIsOn()
+            compose.waitUntil(10_000){compose.onAllNodesWithContentDescription("Preview of ${file.name}",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Grid view").performScrollTo().performClick()
             compose.onNode(hasText(file.name) and !hasSetTextAction()).performScrollTo().performClick()
             compose.onNodeWithText("Review this file only").performClick()
-            compose.onAllNodesWithContentDescription("Preview of ${file.name}").onLast().assertIsDisplayed()
+            val dialogPreview=hasContentDescription("Preview of ${file.name}") and hasAnyAncestor(isDialog())
+            compose.waitUntil(10_000){compose.onAllNodes(dialogPreview,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+            compose.onNode(dialogPreview,useUnmergedTree=true).assertIsDisplayed()
             compose.onNodeWithText("Keep exploring").performClick()
         } finally {file.delete(); context.getSharedPreferences("sift-ui",android.content.Context.MODE_PRIVATE).edit().putBoolean("file-grid",false).commit()}
     }
