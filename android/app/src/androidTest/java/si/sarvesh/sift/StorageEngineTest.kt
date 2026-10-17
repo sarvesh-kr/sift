@@ -92,13 +92,19 @@ class StorageEngineTest {
         val file=File(root,"selected").apply{writeText("recover")};scan(engine);clean(engine,setOf(file.path),Action.TRASH)
         val entry=engine.trash().single(); val manifest=File(index,"${entry.id}.json")
         val json=org.json.JSONObject(manifest.readText());json.remove("stored");manifest.writeText(json.toString())
+        // Android media FUSE may change mtime during the known rename. A pending
+        // durable record must still recover its private, nonce-named destination.
+        assertTrue(File(entry.stored.path).setLastModified(entry.stored.modified+5000))
         assertEquals(1,engine.trash().size)
         assertEquals(1,engine.manageTrash(setOf(entry.id),true,""){_,_->}.removed.size)
         assertEquals("recover",file.readText())
     }
-    @Test fun corruptTrashIndexIsReportedAndNeverDeletesStoredFiles() = fixture {root,bin,index,engine ->
+    @Test fun changedOrCorruptTrashEntriesAreReportedAndNeverDeleted() = fixture {root,bin,index,engine ->
         val file=File(root,"selected").apply{writeText("keep safe")};scan(engine);clean(engine,setOf(file.path),Action.TRASH)
-        val entry=engine.trash().single();File(index,"${entry.id}.json").writeText("broken")
+        val entry=engine.trash().single()
+        assertTrue(File(entry.stored.path).setLastModified(entry.stored.modified+5000))
+        assertTrue(engine.trash().isEmpty());assertEquals(1,engine.unreadableTrashRecords)
+        File(index,"${entry.id}.json").writeText("broken")
         assertTrue(engine.trash().isEmpty());assertEquals(1,engine.unreadableTrashRecords)
         assertEquals("keep safe",File(bin,entry.id).readText())
     }
