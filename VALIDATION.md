@@ -1,4 +1,4 @@
-# Sift 0.3.0 validation
+# Sift 0.4.0 validation
 
 The release pipeline requires passing interface tests and native safety tests
 before publishing installers. Build metadata in each release identifies its exact
@@ -13,7 +13,7 @@ source commit. See GitHub Actions for the recorded outcome on each runner.
   contents, handle a locked file followed by a recyclable file, and refuse a
   callback requesting deletion without recycling. Fixture filtering uses the
   unique test directory; no unrelated Recycle Bin items are modified.
-- **18 frontend checks:** storage analysis and review flows, keyboard focus,
+- **21 frontend checks:** storage analysis and review flows, keyboard focus,
   responsive layout, and mocked native partial/zero-success cleanup. These verify
   that per-file errors persist, successful files are excluded from a retry, typed confirmations reset with selection changes, single-file and filtered all-match selection work, and incomplete overwrites block cleanup until rescanning.
 - **Five website checks:** release links, Mac architecture selection, previews,
@@ -58,3 +58,17 @@ Emulators do not establish physical-device or OEM-wide qualification. Android
 cannot clean other apps' protected private data. Trash remains app-owned storage
 and is removed when Sift is uninstalled. Permanent deletion cannot guarantee
 physical erasure from flash or synchronized copies. See docs/ANDROID.md.
+
+## Local previews and layouts (desktop 0.4.0 / Android 0.2.0)
+
+- Desktop native fixtures cover decoded image dimensions, scaled/EXIF-oriented
+  camera JPEGs, corrupt-image fallback, bounded inert text, binary exclusion,
+  and changed-file refusal. Windows additionally exercises a real Shell bitmap.
+- Interface checks cover lazy loading, grid/list selection retention, search of
+  unloaded files, saved layout, larger details, visual cleanup review,
+  folder/duplicate views, inert HTML, and type fallback.
+- Android device checks exercise actual PNG, MP4 frame, and PDF rendering;
+  text/binary/corrupt fallbacks; private trash previews; and Compose grid/list
+  selection retention plus cleanup review. No user data is used.
+- Decode limits and private memory caches keep previews separate from the scan.
+  A preview is a cached snapshot, not proof that a file is safe to delete.

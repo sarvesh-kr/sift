@@ -53,7 +53,7 @@ internal data class ContentPreview(val bitmap: Bitmap? = null, val text: String?
 internal object PhonePreviews {
     private val slots = Semaphore(3)
     private val cache = object : LruCache<String, ContentPreview>(24 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: ContentPreview) = value.bitmap?.allocationByteCount ?: ((value.text?.length ?: 0) * 2 + 128)
+        override fun sizeOf(key: String, value: ContentPreview) = key.length * 2 + 128 + (value.bitmap?.allocationByteCount ?: ((value.text?.length ?: 0) * 2))
     }
     private fun validate(context: Context, entry: Entry): File {
         val file = File(entry.path)

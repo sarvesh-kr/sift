@@ -26,6 +26,7 @@ test('real previews are lazy, switching layouts retains selection, and all revie
   await nativeFiles(page);
   await page.getByRole('button',{name:'All files',exact:true}).click();
   await expect(page.getByRole('img',{name:'Preview of portrait-002.png'})).toBeVisible();
+  await expect.poll(() => page.getByRole('img',{name:'Preview of portrait-002.png'}).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   expect(await page.evaluate(() => (window as unknown as {previewCalls:string[]}).previewCalls.some(path => path.includes('079')))).toBe(false);
   await page.getByRole('checkbox',{name:'Select portrait-002.png',exact:true}).check();
   await page.getByRole('button',{name:'Grid view',exact:true}).click();
