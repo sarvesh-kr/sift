@@ -57,6 +57,7 @@ internal data class RecoveryProgress(
     val total: Long,
     val found: Int,
     val phase: String,
+    val unit: String = "bytes",
 )
 
 internal fun ByteArray.hex() = joinToString("") { "%02x".format(it.toInt() and 255) }

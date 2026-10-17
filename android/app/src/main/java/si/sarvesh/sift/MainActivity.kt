@@ -86,8 +86,8 @@ class MainActivity : ComponentActivity() {
     var grid by rememberSaveable { mutableStateOf(preferences.getBoolean("file-grid", false)) }
     LaunchedEffect(grid) { preferences.edit().putBoolean("file-grid",grid).apply() }
     var tab by rememberSaveable { mutableStateOf(initialTab) }
-    var query by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf("All") }
+    var query by rememberSaveable(state.storageId) { mutableStateOf("") }
+    var filter by rememberSaveable(state.storageId) { mutableStateOf("All") }
     var review by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<Entry?>(null) }
     var help by remember { mutableStateOf(false) }

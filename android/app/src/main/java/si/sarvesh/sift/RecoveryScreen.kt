@@ -331,7 +331,10 @@ internal fun RecoveryScreen(
                     ) {
                         Icon(Icons.Default.Search, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Scan this phone")
+                        Text(
+                            if (state.storageId == "primary") "Scan this phone"
+                            else "Scan selected storage"
+                        )
                     }
                     RecoveryNote(
                         "This searches surviving copies; original deletion status is unknown. It does not read deleted internal-storage sectors or other apps’ private data. Windows provides a separate direct NTFS undelete scan with administrator consent."
@@ -396,7 +399,13 @@ internal fun RecoveryScreen(
                                 modifier = Modifier.padding(top = 10.dp),
                             )
                             RecoveryNote(
-                                "${sizeLabel(state.progress?.bytes?:0)} / ${sizeLabel(state.progress?.total?:0)} · ${state.progress?.found?:0} files"
+                                when (state.progress?.unit) {
+                                    "records" ->
+                                        "${state.progress?.bytes?:0} / ${state.progress?.total?:0} records · ${state.progress?.found?:0} files"
+                                    "entries" -> "${state.progress?.bytes?:0} entries examined"
+                                    else ->
+                                        "${sizeLabel(state.progress?.bytes?:0)} / ${sizeLabel(state.progress?.total?:0)} · ${state.progress?.found?:0} files"
+                                }
                             )
                             TextButton(onClick = model::stop) { Text("Stop recovery") }
                         }

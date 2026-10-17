@@ -207,10 +207,10 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                 session = UUID.randomUUID().toString(),
             )
         }
-        val root =
-            storageSources(getApplication()).firstOrNull { it.id == mutable.value.storageId }?.root
+        val source =
+            storageSources(getApplication()).firstOrNull { it.id == mutable.value.storageId }
                 ?: error("Choose a mounted storage device.")
-        val next = PhoneRecoveryInput(root)
+        val next = PhoneRecoveryInput(source.root, source.label)
         document = next
         next.carver.setCancelled(stopRequested.get())
         val report =

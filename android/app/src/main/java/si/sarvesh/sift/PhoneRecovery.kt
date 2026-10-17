@@ -12,16 +12,17 @@ import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Non-root recovery of surviving shared cache contents. Never a bin or sector scan. */
-internal class PhoneRecoveryInput(root: File) : RecoveryInput {
+internal class PhoneRecoveryInput(root: File, label: String = "Selected storage") : RecoveryInput {
     override val uri: Uri? = null
-    override val carver = PhoneRecoveryReader(root)
+    override val carver = PhoneRecoveryReader(root, label)
 
     override fun sameFile(fd: FileDescriptor) = carver.sameFile(fd)
 
     override fun close() = carver.setCancelled(true)
 }
 
-internal class PhoneRecoveryReader(root: File) : RecoveryReader {
+internal class PhoneRecoveryReader(root: File, private val label: String = "Selected storage") :
+    RecoveryReader {
     private val root = root.canonicalFile
     override val cancel = AtomicBoolean(false)
     override var size = 0L
@@ -29,7 +30,7 @@ internal class PhoneRecoveryReader(root: File) : RecoveryReader {
 
     override var report =
         RecoveryReport(
-            "This phone · shared cache and hidden folders",
+            "$label · shared cache and hidden folders",
             0,
             method = "android-surviving-copies-v1",
         )
@@ -221,7 +222,7 @@ internal class PhoneRecoveryReader(root: File) : RecoveryReader {
         }
         report =
             RecoveryReport(
-                "This phone · shared cache and hidden folders",
+                "$label · shared cache and hidden folders",
                 size,
                 examined,
                 plans.values.map { it.file },

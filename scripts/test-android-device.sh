@@ -8,7 +8,11 @@ adb install -r -t test-apks/androidTest/debug/app-debug-androidTest.apk
 adb root > android-device-results/root-helper-access.txt 2>&1 || true
 adb wait-for-device
 if [ "$(adb shell id -u | tr -d '\r')" = 0 ]; then
-  native_dir=$(adb shell dumpsys package si.sarvesh.sift | sed -n 's/^[[:space:]]*nativeLibraryDir=//p' | tr -d '\r' | head -1)
+  apk_path=$(adb shell pm path si.sarvesh.sift | sed -n 's/^package://p' | tr -d '\r' | head -1)
+  # Both device jobs use x86_64. PackageManager's dumpsys field name differs
+  # between API levels; derive the installed native directory from the base APK.
+  native_dir="${apk_path%/*}/lib/x86_64"
+  adb shell -T "test -x '$native_dir/libsift_root_reader.so'"
   adb shell -T "'$native_dir/libsift_root_reader.so' --storage-id primary" </dev/null > android-device-results/root-helper-header.bin 2> android-device-results/root-helper-error.txt
   python3 - <<'PY'
 from pathlib import Path

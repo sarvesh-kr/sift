@@ -24,7 +24,12 @@ internal class RootRecoveryInput(
     init {
         try {
             channel.connect()
-            carver = RootRecoveryReader(channel)
+            carver =
+                RootRecoveryReader(
+                    channel,
+                    storageSources(context).firstOrNull { it.id == sourceId }?.label
+                        ?: error("Selected storage was disconnected."),
+                )
         } catch (e: Exception) {
             channel.close()
             throw e
@@ -158,9 +163,12 @@ internal class RootBlockChannel(context: Context, private val sourceId: String) 
     }
 }
 
-internal class RootRecoveryReader(private val channel: RootBlockChannel) : RecoveryReader {
+internal class RootRecoveryReader(
+    private val channel: RootBlockChannel,
+    private val sourceLabel: String,
+) : RecoveryReader {
     private val delegate =
-        RecoveryCarver(channel, "This phone · rooted read-only userdata scan", {})
+        RecoveryCarver(channel, "$sourceLabel · rooted read-only storage scan", {})
     override val size
         get() = delegate.size
 
@@ -169,7 +177,7 @@ internal class RootRecoveryReader(private val channel: RootBlockChannel) : Recov
 
     override var report =
         RecoveryReport(
-            "This phone · rooted read-only userdata scan",
+            "$sourceLabel · rooted read-only storage scan",
             size,
             method = "android-root-signature-scan-v1",
         )
@@ -190,7 +198,7 @@ internal class RootRecoveryReader(private val channel: RootBlockChannel) : Recov
                             it.copy(
                                 evidence =
                                     "Rooted raw-storage signature candidate · deletion status unknown · ${it.evidence}",
-                                origin = "Raw userdata @ 0x${it.offset.toString(16)}",
+                                origin = "$sourceLabel raw storage @ 0x${it.offset.toString(16)}",
                             )
                         },
                 )

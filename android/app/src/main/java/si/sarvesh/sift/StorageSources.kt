@@ -44,7 +44,7 @@ internal fun StorageSourcePicker(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val sources = storageSources(context)
+    val sources = remember(context, expanded) { storageSources(context) }
     Box(Modifier.fillMaxWidth()) {
         OutlinedButton(
             onClick = { expanded = true },

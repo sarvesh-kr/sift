@@ -65,6 +65,7 @@ internal class NtfsRecoveryReader(
                                 total,
                                 found,
                                 "Reading NTFS deleted file records",
+                                "records",
                             )
                         )
                     },
