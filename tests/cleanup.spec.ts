@@ -28,6 +28,7 @@ for (const allFail of [false, true]) {
       });
     }, { root, paths, allFail });
     await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
     await page.getByRole('button', { name: 'Scan a folder' }).click();
     await expect(page.getByText('Local scan', { exact: true })).toBeVisible();
     await page.getByRole('checkbox', { name: 'Select visible files' }).check();
@@ -69,6 +70,7 @@ for (const mode of ['delete', 'wipe'] as const) {
       }});
     }, { mode });
     await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
     await page.getByRole('button', {name: 'Scan a folder'}).click();
     await page.getByRole('checkbox', {name: 'Select visible files'}).check();
     await page.getByRole('button', {name: 'Review cleanup'}).click();
@@ -100,6 +102,7 @@ for (const mode of ['delete', 'wipe'] as const) {
 
 test('all matches includes unloaded rows, respects search, and single-file cleanup replaces bulk selection', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', {name: 'All files', exact: true}).click();
   const count = Number((await page.locator('.bulk-selection').innerText()).match(/Add all ([\d,]+)/)![1].replaceAll(',', ''));
   expect(count).toBeGreaterThan(30);
@@ -127,6 +130,7 @@ test('all matches includes unloaded rows, respects search, and single-file clean
 
 test('removing all duplicate copies needs a separate acknowledgment and typed confirmation', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', {name: 'Duplicates', exact: true}).click();
   await page.getByRole('button', {name: /^Add all \d+ matches/}).click();
   await page.getByRole('button', {name: 'Review cleanup'}).click();

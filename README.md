@@ -1,6 +1,6 @@
 # Sift
 
-**Your space, simplified.** A local storage explorer and cleanup assistant for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
+**Your space, simplified.** Local storage cleanup and a disk-image recovery preview for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
 
 [![Quality checks](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml)
 [![Android builds](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml)
@@ -14,9 +14,9 @@
 | Linux x64 | `linux-x64.deb` or `linux-x64.AppImage` |
 | Apple Silicon Mac (M1 or newer) | `macos-apple-silicon.dmg` |
 | Intel Mac | `macos-intel.dmg` |
-| Android 11+ phone | Signed `Sift-0.2.0-android.apk` |
+| Android 11+ phone | Signed `Sift-0.3.0-android.apk` |
 
-Installers and archives are attached to tagged preview releases after every platform build passes. The desktop initial workspace uses labeled sample data; click **Scan a folder** to index your own files.
+Installers and archives are attached to tagged preview releases after every platform build passes. Choose **Clean data** or **Recover data** at launch. The cleaning workspace starts with labeled sample data; click **Scan a folder** to index your own files.
 
 ![Sift Cleanup Center](artifacts/sift-cleanup-center.png)
 
@@ -35,6 +35,28 @@ Previews load on demand with bounded memory and decode concurrency. They do not
 execute files, fetch remote resources, or change cleanup safety checks. Thumbnails
 are a visual aid; inspect paths and retain backups before deletion.
 
+## Clean data and Recover data
+
+Desktop **0.5.0** and Android **0.3.0** open with two workspace choices. Existing
+cleaning tools remain under **Clean data**. **Recover data** offers trash restore
+and read-only carving of a user-picked local disk image, with categorized
+JPEG/PNG/WebP/PDF/ZIP/WAV candidates, List / Grid views, image previews, evidence,
+search, individual/all-match selection, and verified exports grouped by category.
+SHA-256, destination read-back, exclusive outputs, and a JSON manifest preserve
+the distinction between finding a byte range and recovering a readable file.
+
+This is a **contiguous-carving preview**, not professional recovery parity:
+original names, folders, deletion status, fragmented files, filesystem metadata
+undelete, other formats, and files above 512 MiB are unsupported. PDF evidence is
+header/footer only; ZIP payload CRCs are unverified. Android cannot undelete raw
+encrypted internal storage through normal permissions. TRIM, overwriting, and
+encryption can make recovery impossible. Image scanning uses the document picker
+without All files access; shared-storage cleanup and Sift-trash restore still
+need their existing permission. Desktop trash restore uses the OS file manager.
+
+See [the recovery capabilities, safety model, and exact limits](docs/RECOVERY.md).
+No universal-recovery or superiority claim is made.
+
 ## What works on desktop
 
 - Select a local folder or drive with the native folder picker.
@@ -51,7 +73,7 @@ are a visual aid; inspect paths and retain backups before deletion.
 - Overwrite is **not certified media sanitization**: SSD wear leveling, copy-on-write, snapshots, backups, and synced copies may retain data. Sift cannot undo irreversible actions. Unix path operations cannot eliminate every race with unrelated processes; avoid concurrent file changes during cleanup.
 - Export a JSON inventory and persist the reduced-motion preference.
 
-The desktop app initially shows a clearly labeled sample workspace. **Scan a folder** replaces the sample data with a real local scan. The browser preview uses sample data only and never modifies real files.
+Under **Clean data**, the desktop app initially shows a clearly labeled sample workspace. **Scan a folder** replaces the sample data with a real local scan. The browser preview uses sample data only and never modifies real files.
 
 ## Why this stack
 
@@ -66,7 +88,7 @@ The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-speci
 Download the signed APK from [the website](https://sift.sarvesh.si/#download) or
 [Android releases](https://github.com/sarvesh-kr/sift/releases?q=android).
 Android 11 or newer is required. Allow APK installation from your browser or file
-manager when Android asks. Open Sift, explicitly enable its **All files access**
+manager when Android asks. Open Sift, choose **Clean data**, and explicitly enable its **All files access**
 in system settings, return to the app, and scan shared phone storage.
 
 The native client includes category browsing, large-file filtering, search,
@@ -93,7 +115,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:1420`. All interface interactions, including cleanup review, work on the sample workspace. **Scan a folder** explains that native access requires the desktop build.
+Open `http://localhost:1420`. Choose **Clean data** to use the sample workspace and cleanup review. **Recover data** shows its capabilities; native image recovery is not simulated in the browser. **Scan a folder** explains that native access requires the desktop build.
 
 ## Run the desktop application
 

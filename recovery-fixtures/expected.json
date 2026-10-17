@@ -1,0 +1,38 @@
+[
+  {
+    "offset": 258,
+    "size": 85,
+    "format": "png",
+    "sha256": "d51e236748839fa9d9727ecbfba3db888b182437bc12d3b6202bd448da412695"
+  },
+  {
+    "offset": 480,
+    "size": 636,
+    "format": "jpg",
+    "sha256": "7fb378c9e829b2c71fde0819c7a0255133d382dd1a9f127a69320de8c8d164e2"
+  },
+  {
+    "offset": 1253,
+    "size": 68,
+    "format": "webp",
+    "sha256": "c166ac110a0c56371c11d8f3bef27c8d969f76eeaac48631ba01792e8172f2f1"
+  },
+  {
+    "offset": 1458,
+    "size": 88,
+    "format": "pdf",
+    "sha256": "737f13985ab8a65ce92e379715b797e6f061207796ef27639b26906f8735a651"
+  },
+  {
+    "offset": 1683,
+    "size": 148,
+    "format": "zip",
+    "sha256": "fd8b2b0f9ac83b4996043e1b69ad3c7715cf20eb38ec4dd1e8607929d9447700"
+  },
+  {
+    "offset": 1968,
+    "size": 108,
+    "format": "wav",
+    "sha256": "2d4c52cde8888208a03386dedc044839899c8f4c787e69843cc1ef3599db4f9c"
+  }
+]

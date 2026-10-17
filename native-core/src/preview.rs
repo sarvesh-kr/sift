@@ -14,7 +14,7 @@ pub struct FilePreview {
     pub image: Option<String>,
     pub text: Option<String>,
 }
-fn picture(image: image::DynamicImage) -> Result<FilePreview, String> {
+pub(crate) fn picture(image: image::DynamicImage) -> Result<FilePreview, String> {
     let image = image.thumbnail(EDGE, EDGE);
     let mut encoded = Cursor::new(Vec::new());
     image

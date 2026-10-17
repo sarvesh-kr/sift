@@ -56,12 +56,13 @@ fun sizeLabel(bytes: Long): String {
 }
 class MainActivity : ComponentActivity() {
     private val model: SiftViewModel by viewModels()
+    private val recovery: RecoveryViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(statusBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT), navigationBarStyle=SystemBarStyle.light(android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT))
         setContent {
             val state by model.state.collectAsStateWithLifecycle()
-            SiftTheme { SiftScreen(state, model, ::requestStorage) }
+            SiftTheme { SiftRoot(state, model, recovery, ::requestStorage) }
         }
     }
     override fun onResume() { super.onResume(); model.refresh() }
@@ -79,12 +80,12 @@ class MainActivity : ComponentActivity() {
 @Composable private fun Note(text: String) { Text(text, fontSize = 12.sp, color = Muted, lineHeight = 19.sp) }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SiftScreen(state: SiftState, model: SiftViewModel, requestStorage: () -> Unit) {
+@Composable fun SiftScreen(state: SiftState, model: SiftViewModel, requestStorage: () -> Unit, initialTab: Int = 0, recoveryTrash: Boolean = false, onHome: () -> Unit = {}) {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("sift-ui", android.content.Context.MODE_PRIVATE) }
     var grid by rememberSaveable { mutableStateOf(preferences.getBoolean("file-grid", false)) }
     LaunchedEffect(grid) { preferences.edit().putBoolean("file-grid",grid).apply() }
-    var tab by rememberSaveable { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(initialTab) }
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf("All") }
     var review by remember { mutableStateOf<String?>(null) }
@@ -100,9 +101,10 @@ class MainActivity : ComponentActivity() {
     Scaffold(containerColor = Paper, modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
         topBar = {
             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick=onHome,enabled=!state.busy) { Icon(Icons.Default.Home,"Switch workspace") }
                 Canvas(Modifier.size(26.dp)) { for (i in 0..2) drawLine(Forest, androidx.compose.ui.geometry.Offset(i*3f, i*size.height/3+3), androidx.compose.ui.geometry.Offset(size.width-i*3f, i*size.height/3+3), strokeWidth=5f, cap=StrokeCap.Round) }
                 Text("sift.", Modifier.padding(start=10.dp).weight(1f), fontSize=29.sp, fontWeight=FontWeight.SemiBold, letterSpacing=(-1).sp)
-                Text("ON YOUR PHONE", fontSize=9.sp, letterSpacing=1.sp, color=Muted)
+                Text(if(recoveryTrash) "RECOVER DATA" else "CLEAN DATA", fontSize=9.sp, letterSpacing=1.sp, color=Muted)
                 IconButton(onClick={help=true}) { Icon(Icons.Default.Info, "About Sift") }
             }
         }, bottomBar = {
@@ -115,7 +117,7 @@ class MainActivity : ComponentActivity() {
                             colors=ButtonDefaults.buttonColors(containerColor=Color(0xFFDCE9CC),contentColor=Forest)) { Text(if(tab==2) "Delete" else "Review cleanup") }
                     }
                 }
-                NavigationBar(containerColor=Paper) {
+                if(!recoveryTrash) NavigationBar(containerColor=Paper) {
                     listOf("Space" to Icons.Default.Home, "Files" to Icons.AutoMirrored.Filled.List, "Trash" to Icons.Default.Delete).forEachIndexed { i, item ->
                         NavigationBarItem(selected=tab==i,onClick={tab=i},icon={Icon(item.second,null)},label={Text(item.first)})
                     }

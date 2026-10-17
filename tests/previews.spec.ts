@@ -18,6 +18,7 @@ async function nativeFiles(page: import('@playwright/test').Page) {
     } });
   });
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', {name:'Scan a folder'}).click();
   await expect(page.getByText('Local scan',{exact:true})).toBeVisible();
 }
@@ -54,6 +55,7 @@ test('real previews are lazy, switching layouts retains selection, and all revie
   await page.getByRole('button',{name:'Close review'}).click();
   await page.getByRole('button',{name:'Grid view',exact:true}).click();
   await page.reload();
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await expect(page.getByRole('button',{name:'Grid view',exact:true})).toHaveAttribute('aria-pressed','true');
 });
 
@@ -73,6 +75,7 @@ test('text previews remain inert and unavailable content keeps a type fallback',
 
 test('folder and duplicate views share the saved layout', async ({page}) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button',{name:'Grid view',exact:true}).click();
   await page.getByRole('button',{name:'Storage explorer',exact:true}).click();
   await expect(page.getByRole('button',{name:'Grid view',exact:true})).toHaveAttribute('aria-pressed','true');

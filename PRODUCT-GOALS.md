@@ -47,3 +47,20 @@ Run the same datasets on the same real Windows machine and record the exact app 
 | Usability and recovery | Timed real-user tasks, keyboard/screen-reader checks, failed-operation handling, and restore tests on each supported platform. |
 
 Only claim an advantage for the metric and scenario actually measured. “Best in class” is a product goal until the necessary public comparisons and reliability tests support it.
+
+## Recovery goals after the initial carving preview
+
+Desktop 0.5.0 / Android 0.3.0 provide bounded read-only image carving and trash
+access, documented in `docs/RECOVERY.md`. They are not professional recovery
+parity. Further work needs filesystem-aware deleted metadata parsing (starting
+with a separately tested FAT/exFAT image reader, then NTFS), original-path
+provenance, fragmented-file recovery where evidence permits, more formats and
+larger candidates, robust acquisition integration, and real-device qualification.
+
+Before claiming competitive recovery quality, benchmark against established
+recovery tools on reproducible labeled NTFS/FAT/exFAT images, with intact,
+deleted, fragmented, overwritten, encrypted, and TRIM-affected fixtures. Measure
+precision/false positives, byte-exact recall, readable-file rate, path/name
+fidelity, scan throughput, peak memory, cancellation latency, source writes, and
+export verification. Publish hardware, settings, corpus ground truth, and failure
+cases. A generated filename or matching signature is not proof of undelete.

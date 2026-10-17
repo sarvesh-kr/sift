@@ -5,9 +5,29 @@ app. Kotlin and Jetpack Compose use Android's own storage and lifecycle APIs.
 The two clients share the Sift product and repository; Android does not pretend
 that desktop filesystem APIs work around Android's storage restrictions.
 
+## Workspaces and recovery
+
+Android 0.3.0 (version code 3) opens with **Clean data** and **Recover data**.
+Cleaning and Sift-trash restore retain their previous permission and safety
+checks. Recovery can also scan a local, seekable raw image selected through the
+system document picker, without All files access. It carves contiguous JPEG,
+PNG, WebP, PDF, ZIP, and WAV candidates, shows evidence and local image previews,
+and exports selected category-organized copies with SHA-256/read-back checks and
+a JSON manifest. This cannot undelete encrypted internal-storage sectors or
+rebuild fragmented files, original names, or folder trees. [Full recovery scope
+and platform limits](RECOVERY.md).
+
+Image handles live in a separate lifecycle ViewModel. Selection is allowlisted;
+output descriptors open without truncation and must be fresh empty regular
+files distinct from the source. Native picker destinations must support local
+regular-file IO, flush, and read-back. API 30/36 instrumented fixtures include a
+debug-only DocumentsProvider with corruption and source-alias fault injection.
+This provider and golden sample image are excluded from release APKs; packaging
+rejects accidental fixture assets.
+
 ## Storage and cleanup
 
-Android 11+ is required. Target SDK: 36 (Android 16). Onboarding explicitly asks
+Android 11+ is required. Target SDK: 36 (Android 16). The Clean data workspace explicitly asks
 the user to enable **All files access** for Sift before scanning shared primary
 storage. No root, accessibility service, package visibility, internet, contacts,
 or background scan permission is requested. Android/data, Android/obb, other
@@ -57,7 +77,7 @@ codecs fall back to a file-type illustration. Support depends on Android's codec
 Previews are generated for composed visible/prefetched items on IO workers, with
 three concurrent decodes and a 24 MB memory cache. No thumbnails are written to
 shared storage or uploaded. Image/PDF input is capped at 64 MB, output at 384 px,
-and text reads at 4 KB. Scanning remains metadata-only. Trash previews use the
+and text reads at 4 KB. Cleaning inventory scanning remains metadata-only; image recovery reads source bytes. Trash previews use the
 validated private stored file while displaying its original name and path.
 
 Install updates over the existing app using the same signing key. **Do not

@@ -13,6 +13,7 @@ fi
 adb install "$RUNNER_TEMP/smoke.apk"
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE deny
 adb shell am start -n si.sarvesh.sift/.MainActivity
+python scripts/check-android-screen.py 'Clean data' --tap --exact
 python scripts/check-android-screen.py 'Allow shared storage access'
 adb exec-out screencap -p > android-release-results/onboarding.png
 adb shell am force-stop si.sarvesh.sift
@@ -20,6 +21,7 @@ adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE allow
 printf 'Disposable release smoke fixture\n' > "$RUNNER_TEMP/Sift-release-fixture.txt"
 adb push "$RUNNER_TEMP/Sift-release-fixture.txt" /sdcard/Download/Sift-release-fixture.txt
 adb shell am start -n si.sarvesh.sift/.MainActivity
+python scripts/check-android-screen.py 'Clean data' --tap --exact
 python scripts/check-android-screen.py 'Scan shared storage' --tap
 python scripts/check-android-screen.py 'files indexed'
 adb exec-out screencap -p > android-release-results/scanned.png
@@ -44,6 +46,7 @@ if [ "$booted" != 1 ]; then exit 1; fi
 adb shell input keyevent KEYCODE_MENU
 adb shell wm dismiss-keyguard
 adb shell am start -n si.sarvesh.sift/.MainActivity
+python scripts/check-android-screen.py 'Clean data' --tap --exact
 # Input focus can settle after boot_completed; prove that navigation reached
 # the destination screen instead of treating a delivered tap as success.
 for attempt in 1 2 3; do

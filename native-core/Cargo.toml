@@ -1,8 +1,8 @@
 [package]
 name = "sift-core"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
-description = "Local filesystem scanning and reviewed trash operations for Sift"
+description = "Local storage analysis, reviewed cleanup, and read-only disk-image carving for Sift"
 license = "MIT"
 
 [dependencies]
@@ -13,6 +13,11 @@ blake3 = "1.8"
 file-id = "0.2"
 fs2 = "0.4"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+crc32fast = "1"
+memchr = "2"
+aho-corasick = "1"
 walkdir = "2.5"
 
 [target.'cfg(not(windows))'.dependencies]

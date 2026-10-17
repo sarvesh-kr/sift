@@ -1,3 +1,22 @@
+**0.5.0: Clean data / Recover data workspaces.** A new start screen keeps the
+existing storage explorer and cleanup tools under Clean data. Recover data opens
+system trash or scans a local, regular raw disk image for contiguous JPEG, PNG,
+WebP, PDF, ZIP, and WAV candidates. Browse categories, List / Grid, image previews,
+byte offsets, format evidence, and SHA-256. Select one file, several, or all
+filtered matches; save categorized copies into a new folder with a JSON manifest.
+Exports compare scan hashes and read copies back, with exclusive creation,
+non-replacing publication, cancellation, and per-file outcomes. No source writes.
+
+**Recovery preview limits:** no live raw disks, image creation, filesystem
+metadata undelete, original names/folders, fragmented-file reconstruction,
+decryption, or universal recovery. Candidates may be existing files or false
+positives. PDF header/footer evidence and ZIP directory checks do not prove
+readability or payload integrity. Six formats, 512 MiB per file, 10,000 candidates,
+and bounded probing; limit/stopped scans are labeled partial. SSD TRIM,
+overwriting, or encryption may make recovery impossible. Save recovered copies
+to another physical drive. See `docs/RECOVERY.md` for exact scope and limits.
+No superiority over professional recovery software has been established.
+
 **0.4.0: recognize your files before cleaning up.** Choose List or Grid, with
 local image thumbnails and plain-text/source previews. Windows can additionally
 use its available thumbnail handlers for video, PDF, Office, and newer image
@@ -28,7 +47,7 @@ Choose the download for your computer:
 - **Apple Silicon Mac (M1 or newer):** `macos-apple-silicon.dmg`.
 - **Intel Mac:** `macos-intel.dmg`.
 
-The initial dashboard displays labeled sample data. Click **Scan a folder** to index your real files. Review full paths before cleanup. Moving files to trash typically does not increase available capacity until the trash is emptied.
+Choose **Clean data** at launch; its initial dashboard displays labeled sample data. Click **Scan a folder** to index your real files. Review full paths before cleanup. Moving files to trash typically does not increase available capacity until the trash is emptied.
 
 Packages are unsigned; macOS builds are not notarized. They may require an explicit OS security confirmation. The workflow tests the scanner on each build OS and runs interface tests in Chromium; this does not establish interactive desktop qualification. See the README and validation notes for current limits.
 

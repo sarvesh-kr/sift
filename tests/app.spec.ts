@@ -4,6 +4,7 @@ test('overview, category navigation, and file search work', async ({ page }) => 
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await expect(page.getByRole('heading', { name: 'Your space, simplified.' })).toBeVisible();
   await expect(page.getByText('Demo preview', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Explore Videos,/ }).click();
@@ -17,6 +18,7 @@ test('overview, category navigation, and file search work', async ({ page }) => 
 
 test('cleanup requires review, allows keeping a file, and only changes demo data', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('checkbox', { name: 'Select Summer in Portugal.mp4', exact: true }).check();
   await page.getByRole('checkbox', { name: 'Select Design archive 2024.zip', exact: true }).check();
   await page.getByRole('button', { name: 'Review cleanup' }).click();
@@ -33,6 +35,7 @@ test('cleanup requires review, allows keeping a file, and only changes demo data
 
 test('duplicates are grouped, preferences persist, and browser scan explains desktop access', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', { name: 'Duplicates', exact: false }).first().click();
   await expect(page.getByRole('heading', { name: 'One is enough.' })).toBeVisible();
   await expect(page.locator('tbody tr')).toHaveCount(6);
@@ -40,6 +43,7 @@ test('duplicates are grouped, preferences persist, and browser scan explains des
   await page.getByRole('checkbox', { name: /Reduce motion/ }).check();
   await page.getByRole('button', { name: 'Close preferences' }).click();
   await page.reload();
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-reduced-motion', 'true');
   await page.getByRole('button', { name: 'Scan a folder' }).click();
   await expect(page.getByRole('dialog')).toContainText('browser preview');
@@ -47,6 +51,7 @@ test('duplicates are grouped, preferences persist, and browser scan explains des
 
 test('layout remains usable at desktop and compact sizes', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.screenshot({ path: 'artifacts/sift-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 900, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
@@ -57,6 +62,7 @@ test('layout remains usable at desktop and compact sizes', async ({ page }) => {
 
 test('overview select-all only selects the five displayed rows and dialogs retain keyboard focus', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('checkbox', { name: 'Select visible files' }).check();
   await expect(page.getByText('5 files selected', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Review cleanup' }).click();
@@ -70,6 +76,7 @@ test('overview select-all only selects the five displayed rows and dialogs retai
 
 test('cleanup center explains recommendations and opens their exact candidate list', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', { name: 'Cleanup center', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Make room, with a reason.' })).toBeVisible();
   const card = page.locator('.insight-card').filter({ has: page.getByRole('heading', { name: 'Older installers', exact: true }) });
@@ -83,6 +90,7 @@ test('cleanup center explains recommendations and opens their exact candidate li
 
 test('folder explorer drills into folders and scopes the file list', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', { name: 'Storage explorer', exact: true }).click();
   await page.getByRole('button', { name: /^Downloads \d+ files in this branch/ }).click();
   await expect(page.locator('.explorer-breadcrumbs')).toContainText('Downloads');
@@ -94,6 +102,7 @@ test('folder explorer drills into folders and scopes the file list', async ({ pa
 
 test('duplicate review keeps one copy, updates chosen keeper, and blocks selecting every copy', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.getByRole('button', { name: 'Duplicates', exact: false }).first().click();
   const group = page.locator('.duplicate-group').first();
   await group.getByRole('button', { name: 'Select extra copies' }).click();
@@ -108,6 +117,7 @@ test('duplicate review keeps one copy, updates chosen keeper, and blocks selecti
 
 test('advanced screens stay within compact layouts', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', {name:'Clean data', exact:true}).click();
   await page.setViewportSize({ width: 600, height: 900 });
   for (const label of ['Cleanup center', 'Storage explorer', 'Duplicates']) {
     await page.getByRole('button', { name: label, exact: label !== 'Duplicates' }).first().click();

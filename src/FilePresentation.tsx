@@ -15,7 +15,7 @@ class PreviewStore {
   interested = new Map<string, (() => boolean)[]>();
   active = 0;
   bytes = 0;
-  constructor(public enabled: boolean) {}
+  constructor(public enabled: boolean, public command: 'file_preview' | 'recovery_preview' = 'file_preview') {}
   load(file: FileEntry, alive: () => boolean): Promise<Preview | null> {
     const key = JSON.stringify([file.path, file.size, file.modified]);
     if (this.cache.has(key)) { const value = this.cache.get(key)!; this.cache.delete(key); this.cache.set(key, value); return Promise.resolve(value); }
@@ -25,7 +25,7 @@ class PreviewStore {
       this.queue.push(() => {
         if (!this.interested.get(key)?.some(check => check())) { this.pending.delete(key); this.interested.delete(key); resolve(null); this.pump(); return; }
         this.active++;
-        invoke<Preview | null>('file_preview', { path: file.path }).catch(() => null).then(value => {
+        invoke<Preview | null>(this.command, this.command === 'file_preview' ? { path: file.path } : { id: file.path }).catch(() => null).then(value => {
           this.cache.set(key, value); this.bytes += JSON.stringify(value).length * 2;
           while (this.cache.size > 96 || this.bytes > 12 * 1024 * 1024) {
             const oldest = this.cache.keys().next().value!;
@@ -40,13 +40,13 @@ class PreviewStore {
   pump() { while (this.active < 3 && this.queue.length) this.queue.shift()!(); }
 }
 const Context = createContext(new PreviewStore(false));
-export function PreviewProvider({ enabled, files, children }: { enabled: boolean; files: FileEntry[]; children: ReactNode }) {
-  const store = useMemo(() => new PreviewStore(enabled), [enabled, files]);
+export function PreviewProvider({ enabled, files, children, command = 'file_preview' }: { enabled: boolean; files: FileEntry[]; children: ReactNode; command?: 'file_preview' | 'recovery_preview' }) {
+  const store = useMemo(() => new PreviewStore(enabled, command), [enabled, files, command]);
   return <Context.Provider value={store}>{children}</Context.Provider>;
 }
-export function useFileLayout() {
-  const [layout, setLayout] = useState<FileLayout>(() => localStorage.getItem('sift-file-layout') === 'grid' ? 'grid' : 'list');
-  useEffect(() => localStorage.setItem('sift-file-layout', layout), [layout]);
+export function useFileLayout(storageKey = 'sift-file-layout') {
+  const [layout, setLayout] = useState<FileLayout>(() => localStorage.getItem(storageKey) === 'grid' ? 'grid' : 'list');
+  useEffect(() => localStorage.setItem(storageKey, layout), [layout, storageKey]);
   return [layout, setLayout] as const;
 }
 export function ViewOptions({ layout, onChange }: { layout: FileLayout; onChange: (layout: FileLayout) => void }) {

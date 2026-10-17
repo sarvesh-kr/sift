@@ -10,8 +10,8 @@ android {
         applicationId = "si.sarvesh.sift"
         minSdk = 30
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -30,6 +30,9 @@ android {
             signingConfig = signingConfigs.findByName("release")
         }
     }
+    sourceSets.getByName("debug").assets.srcDir("../../recovery-fixtures")
+    sourceSets.getByName("test").resources.srcDir("../../recovery-fixtures")
+    sourceSets.getByName("androidTest").assets.srcDir("../../recovery-fixtures")
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }

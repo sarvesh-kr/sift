@@ -1,4 +1,4 @@
-# Sift 0.4.0 validation
+# Sift validation
 
 The release pipeline requires passing interface tests and native safety tests
 before publishing installers. Build metadata in each release identifies its exact
@@ -81,3 +81,25 @@ including actual PNG/video/PDF previews and native layout/selection behavior.
 The optimized APK additionally passed [cleanup and restore after reboot](https://github.com/sarvesh-kr/sift/actions/runs/39028282583).
 Android APK source is `e9ba6d6f60a2bd98fff82b59182e62d29b413e35`; the signed
 public APK uses the original Sift certificate and version code 2.
+
+## Recovery preview (desktop 0.5.0 / Android 0.3.0)
+
+The two clients consume the same six-format synthetic golden image and expected
+byte offsets, sizes, and SHA-256 values. Native recovery checks cover source
+preservation, corruption, overlap, changed/replaced images, allowlists, export
+verification/manifests, cancellation, bounded previews, repeated JPEG markers,
+and atomic publication without replacement. Kotlin JVM checks cover the shared
+golden contract, copies, corruption, cancellation, source changes, and JPEG
+search-window reuse. Browser checks cover mode routing/state retention, category
+filters, selection/layout, evidence details, exact one-file export IDs, and focus.
+
+Android device gates use an isolated debug-only DocumentsProvider for real SAF
+scan/export, corrupted destination rejection, source URI alias rejection without
+truncation/deletion, grid/list retention, and Sift-trash navigation. The release
+packager rejects accidentally included golden fixtures. Optimized release smoke
+checks now enter Clean data through the real launcher before scan/trash/reboot/
+restore. CI run outcomes for this release are recorded after completion below.
+
+These checks do not establish forensic acquisition, original-path restoration,
+fragmented-file recovery, physical-device recovery rates, or superiority over
+commercial tools. [Exact recovery scope and limits](docs/RECOVERY.md).

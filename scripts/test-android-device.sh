@@ -6,6 +6,7 @@ adb install -r -t test-apks/androidTest/debug/app-debug-androidTest.apk
 # Verify the real first-launch permission screen before granting anything.
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE deny
 adb shell am start -n si.sarvesh.sift/.MainActivity
+python3 scripts/check-android-screen.py 'Clean data' --tap --exact
 onboarding=0
 for attempt in $(seq 1 10); do
   adb shell uiautomator dump /sdcard/sift-window.xml >/dev/null 2>&1 || true
@@ -17,6 +18,7 @@ adb shell am force-stop si.sarvesh.sift
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE allow
 adb shell am instrument -w -r si.sarvesh.sift.test/androidx.test.runner.AndroidJUnitRunner > android-device-results/instrumentation.txt
 adb pull /sdcard/Android/data/si.sarvesh.sift/cache/sift-grid.png "android-device-results/grid-api-$1.png" || true
+adb pull /sdcard/Android/data/si.sarvesh.sift/cache/sift-recovery.png "android-device-results/recovery-api-$1.png" || true
 cat android-device-results/instrumentation.txt
 python3 - <<'PY'
 from pathlib import Path
@@ -29,7 +31,7 @@ adb shell am start -n si.sarvesh.sift/.MainActivity
 # Give the first Compose frame time to draw before capturing the actual emulator UI.
 for attempt in $(seq 1 10); do
   adb shell uiautomator dump /sdcard/sift-window.xml >/dev/null 2>&1 || true
-  if adb shell cat /sdcard/sift-window.xml | grep -q 'Your phone'; then break; fi
+  if adb shell cat /sdcard/sift-window.xml | grep -q 'Make room'; then break; fi
 done
 adb exec-out screencap -p > "android-device-results/phone-api-$1.png"
 adb logcat -d -t 1000 > android-device-results/logcat.txt

@@ -11,6 +11,7 @@ import org.junit.runner.RunWith
 class PhoneUiTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     @Test fun nativePhoneNavigationAndTrashExplanationAreAccessible() {
+        compose.onNodeWithText("Clean data").performClick()
         compose.onNodeWithText("Your phone,\na little lighter.").assertIsDisplayed()
         compose.onNodeWithText("Files",useUnmergedTree=true).performClick()
         compose.onNodeWithText("Everything in its place.").assertIsDisplayed()
@@ -28,6 +29,7 @@ class PhoneUiTest {
         bitmap.eraseColor(android.graphics.Color.GREEN)
         file.outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()
         try {
+            compose.onNodeWithText("Clean data").performClick()
             compose.onNodeWithText("Scan shared storage").performScrollTo().performClick()
             compose.waitUntil(15_000){compose.onAllNodesWithText("files indexed",substring=true).fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithText("Files",useUnmergedTree=true).performClick()

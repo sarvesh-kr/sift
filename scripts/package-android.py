@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import zipfile
 
 root = Path(__file__).resolve().parents[1]
 config = (root/'android/app/build.gradle.kts').read_text()
@@ -17,6 +18,9 @@ source = root/'android/app/build/outputs/apk/release'
 signed = (source/'app-release.apk').is_file()
 apk = source/('app-release.apk' if signed else 'app-release-unsigned.apk')
 if not apk.is_file(): raise SystemExit('Android APK missing')
+with zipfile.ZipFile(apk) as archive:
+    if any(name in archive.namelist() for name in ['assets/sample.img','assets/expected.json','assets/expected.tsv']):
+        raise SystemExit('Debug recovery fixtures must never ship in a release APK')
 output = root/'dist-android'; output.mkdir(exist_ok=True)
 name = f'Sift-{version}-android'+('' if signed else '-unsigned')+'.apk'
 shutil.copy2(apk, output/name)

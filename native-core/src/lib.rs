@@ -1,4 +1,5 @@
 mod preview;
+pub mod recovery;
 pub use preview::{file_preview, FilePreview};
 use serde::Serialize;
 use std::{

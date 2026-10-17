@@ -13,6 +13,7 @@ use tauri_plugin_dialog::DialogExt;
 struct Session {
     chosen: Mutex<Option<PathBuf>>,
     report: Mutex<Option<ScanReport>>,
+    recovery: Mutex<Option<sift_core::recovery::RecoverySession>>,
     busy: AtomicBool,
     cancel: AtomicBool,
     needs_rescan: AtomicBool,
@@ -276,6 +277,135 @@ async fn export_report(
     .map_err(|error| error.to_string())?
 }
 
+#[tauri::command]
+async fn scan_recovery_image(
+    app: tauri::AppHandle,
+    session: State<'_, Arc<Session>>,
+) -> Result<Option<sift_core::recovery::RecoveryReport>, String> {
+    let session = Arc::clone(session.inner());
+    let guard = lock_work(&session)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let Some(picked) = app
+            .dialog()
+            .file()
+            .set_title("Choose a local raw disk image (.img / .dd / .raw)")
+            .blocking_pick_file()
+        else {
+            return Ok(None);
+        };
+        let path = picked.into_path().map_err(|e| e.to_string())?;
+        // Retain a read-only evidence handle and allow only IDs from this scan.
+        let mut slot = session.recovery.lock().map_err(|e| e.to_string())?;
+        *slot = None;
+        let mut recovery = sift_core::recovery::RecoverySession::open(&path)?;
+        let report = recovery.scan(&session.cancel, |progress| {
+            let _ = app.emit("recovery-progress", progress);
+        })?;
+        *slot = Some(recovery);
+        Ok(Some(report))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn close_recovery_image(session: State<'_, Arc<Session>>) -> Result<(), String> {
+    let session = Arc::clone(session.inner());
+    let guard = lock_work(&session)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        *session.recovery.lock().map_err(|e| e.to_string())? = None;
+        Ok(())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn recovery_preview(
+    id: String,
+    session: State<'_, Arc<Session>>,
+) -> Result<Option<sift_core::FilePreview>, String> {
+    static SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+    let permit = SLOTS.acquire().await.map_err(|e| e.to_string())?;
+    let session = Arc::clone(session.inner());
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        if session.busy.load(Ordering::Acquire) {
+            return Err("Previews paused during recovery.".into());
+        }
+        session
+            .recovery
+            .try_lock()
+            .map_err(|_| "Recovery image is busy.")?
+            .as_mut()
+            .ok_or("Scan an image first.")?
+            .preview(&id)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    drop(permit);
+    result
+}
+#[tauri::command]
+async fn export_recovery_files(
+    app: tauri::AppHandle,
+    ids: Vec<String>,
+    session: State<'_, Arc<Session>>,
+) -> Result<Option<sift_core::recovery::RecoveryExport>, String> {
+    let session = Arc::clone(session.inner());
+    let guard = lock_work(&session)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = guard;
+        let Some(picked) = app
+            .dialog()
+            .file()
+            .set_title("Save recovered copies — prefer another physical drive")
+            .blocking_pick_folder()
+        else {
+            return Ok(None);
+        };
+        let destination = picked.into_path().map_err(|e| e.to_string())?;
+        let result = session
+            .recovery
+            .lock()
+            .map_err(|e| e.to_string())?
+            .as_mut()
+            .ok_or("Scan an image first.")?
+            .export(&destination, &ids, &session.cancel, |progress| {
+                let _ = app.emit("recovery-progress", progress);
+            })?;
+        Ok(Some(result))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn open_system_trash() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(windows)]
+        let status = std::process::Command::new("explorer.exe")
+            .arg("shell:RecycleBinFolder")
+            .spawn();
+        #[cfg(target_os = "macos")]
+        let status = std::process::Command::new("open")
+            .arg(
+                std::env::var_os("HOME")
+                    .map(PathBuf::from)
+                    .ok_or("Home directory unavailable.")?
+                    .join(".Trash"),
+            )
+            .spawn();
+        #[cfg(target_os = "linux")]
+        let status = std::process::Command::new("gio")
+            .args(["open", "trash:///"])
+            .spawn();
+        status.map(|_| ()).map_err(|e| {
+            format!("Could not open system trash: {e}. Open it from your system file manager.")
+        })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -291,7 +421,12 @@ pub fn run() {
             trash_files,
             cleanup_files,
             export_report,
-            file_preview
+            file_preview,
+            scan_recovery_image,
+            recovery_preview,
+            close_recovery_image,
+            export_recovery_files,
+            open_system_trash
         ])
         .run(tauri::generate_context!())
         .expect("Could not start Sift");

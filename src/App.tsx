@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import { ArrowDown, ArrowDownToLine, ArrowRight, ArrowUpDown, AudioLines, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Code2, Copy, File, FileArchive, FileImage, FileText, Film, Folder, FolderOpen, HardDrive, LayoutDashboard, LoaderCircle, Monitor, MoreHorizontal, Plus, Search, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { bytes, categories, colors, demoReport, relativeDate } from './model';
 import TreeMap from './TreeMap';
+import { ModeHome, RecoveryWorkspace } from './RecoveryWorkspace';
 import { FileThumbnail, PreviewProvider, useFileLayout, ViewOptions } from './FilePresentation';
 import CleanupCenter from './CleanupCenter';
 import StorageExplorer from './StorageExplorer';
@@ -22,6 +23,15 @@ const categoryIcons = { Videos: Film, Images: FileImage, Documents: FileText, Au
 const navigation = [{ name: 'Overview', icon: LayoutDashboard }, { name: 'Cleanup center', icon: Sparkles }, { name: 'Storage explorer', icon: HardDrive }, { name: 'All files', icon: FolderOpen }, { name: 'Duplicates', icon: Copy }, { name: 'Cleanup review', icon: Trash2 }] as const;
 
 export default function App() {
+  const [mode, setMode] = useState<'home' | 'clean' | 'recover'>('home');
+  const [visited, setVisited] = useState({clean: false, recover: false});
+  function open(next: 'clean' | 'recover') { setVisited(current => ({...current, [next]: true})); setMode(next); }
+  return <>{mode === 'home' && <ModeHome onSelect={open}/>}
+    {visited.clean && <div hidden={mode !== 'clean'}><CleanWorkspace active={mode === 'clean'} onHome={() => setMode('home')}/></div>}
+    {visited.recover && <div hidden={mode !== 'recover'}><RecoveryWorkspace active={mode === 'recover'} onHome={() => setMode('home')}/></div>}
+  </>;
+}
+function CleanWorkspace({active, onHome}: {active: boolean; onHome: () => void}) {
   const [layout, setLayout] = useFileLayout();
   const [report, setReport] = useState<ScanReport>(demoReport);
   const [preview, setPreview] = useState(true);
@@ -219,10 +229,10 @@ export default function App() {
   let cumulative = 0;
   const donut = breakdown.map(item => { const start = cumulative; cumulative += total ? item.size / total * 100 : 0; return `${colors[item.category]} ${start}% ${cumulative}%`; }).join(', ');
 
-  return <PreviewProvider enabled={native && !preview} files={report.files}><div className="app-shell">
+  return <PreviewProvider enabled={native && !preview && active} files={report.files}><div className="app-shell">
     <aside className="sidebar">
       <a className="brand" href="#" onClick={event => { event.preventDefault(); navigate('Overview'); }} aria-label="Sift home"><span className="brand-mark"><span/><span/><span/></span><span>sift<span className="brand-dot">.</span></span></a>
-      <div className="workspace-label">YOUR WORKSPACE</div>
+      <button className="nav-item mode-switch" onClick={onHome} disabled={busy || cleaning}><ArrowRight size={16}/>Switch workspace</button><div className="workspace-label">CLEAN DATA</div>
       <nav>{navigation.map(({ name, icon: Icon }) => <button key={name} aria-label={name} className={`nav-item ${page === name ? 'active' : ''}`} onClick={() => navigate(name)}><Icon size={18}/><span>{name}</span>{name === 'Cleanup review' && selected.size > 0 && <span className="nav-count">{selected.size}</span>}{name === 'Duplicates' && <span className="nav-new">{groups.length}</span>}</button>)}</nav>
       <div className="sidebar-bottom">
         <div className="local-card"><div className="local-card-icon"><ShieldCheck size={20}/></div><h3>Your files stay yours.</h3><p>Everything happens on your device. Always.</p><span><span className="status-dot"/> 100% local & private</span></div>
