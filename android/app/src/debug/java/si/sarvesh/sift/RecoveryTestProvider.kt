@@ -22,6 +22,7 @@ class RecoveryTestProvider : DocumentsProvider() {
 
     private var corruptReadback = false
     private var aliasSource = false
+    private var aliasReadOnly = false
 
     private fun file(id: String): File {
         val result = if (id == "root") root else File(root, id).canonicalFile
@@ -47,8 +48,13 @@ class RecoveryTestProvider : DocumentsProvider() {
                 File(root, "destination").mkdir()
                 corruptReadback = false
                 aliasSource = false
+                aliasReadOnly = false
             }
             if (method == "sift.test.source-alias") aliasSource = true
+            if (method == "sift.test.source-alias-read-only") {
+                aliasSource = true
+                aliasReadOnly = true
+            }
             if (method == "sift.test.corrupt-readback") corruptReadback = true
             return Bundle()
         }
@@ -136,6 +142,8 @@ class RecoveryTestProvider : DocumentsProvider() {
         signal: CancellationSignal?,
     ): ParcelFileDescriptor {
         val file = file(documentId)
+        if (aliasReadOnly && documentId == "sample.img" && mode != "r")
+            throw java.io.FileNotFoundException("Synthetic source is read-only.")
         if (
             corruptReadback &&
                 mode == "r" &&

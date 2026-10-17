@@ -103,3 +103,9 @@ restore. CI run outcomes for this release are recorded after completion below.
 These checks do not establish forensic acquisition, original-path restoration,
 fragmented-file recovery, physical-device recovery rates, or superiority over
 commercial tools. [Exact recovery scope and limits](docs/RECOVERY.md).
+
+Android export review additionally covers a provider alias that refuses write
+opens: failure cleanup cannot delete an unverified destination/source alias.
+Permission-free recovery is tested in its own process started with access denied;
+permission changes occur only between instrumentation invocations. Lazy-grid UI
+checks scroll the container to uncomposed results before interacting with them.

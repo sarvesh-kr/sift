@@ -70,7 +70,8 @@ No superiority over professional recovery tools or universal recovery is claimed
   Linux `RENAME_NOREPLACE`, macOS `RENAME_EXCL`, and Windows `MoveFileW`. There is
   no replacing fallback if the filesystem rejects that operation. Android uses
   fresh DocumentsProvider documents, non-truncating opens, empty-file/type checks,
-  and source descriptor-identity checks before writing. Providers must support
+  and source descriptor-identity checks before writing. Failed or unverified
+  destination opens never trigger document deletion. Providers must support
   regular local files, read-back, and flush; unsupported destinations report errors.
 - Failures are per file. Failed incomplete copies are removed when possible;
   removal failures are reported. Stop preserves completed verified copies;
@@ -114,7 +115,9 @@ JPEG search-window reuse, and no-replacement publication. Kotlin JVM tests consu
 the same image and exercise exact copies, changes, corruption, cancellation, and
 JPEG marker density. Android instrumented tests use an isolated **debug-only**
 DocumentsProvider to exercise real SAF descriptors, read-back failure, source URI
-aliases, Compose selection/layout/details, and trash navigation. No test provider
+aliases, Compose selection/layout/details, and trash navigation. Permission-free image recovery runs in a separate
+invocation with All files access already denied; revoking this permission during
+instrumentation terminates Android’s running app process. No test provider
 or sample image is included in release APKs. Interface tests verify launcher,
 state retention, native command arguments, filters, one-file export, and focus.
 

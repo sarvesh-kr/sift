@@ -299,8 +299,11 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                 require(created != source.uri && created != directory && created != folder) {
                     "Invalid destination document."
                 }
-                output = created
+                // Cleanup is permitted only after proving that the opened descriptor
+                // is a new empty file distinct from the source. Failed opens must not
+                // cause deletion through a provider-supplied source URI alias.
                 val fd = newOutput(created, source)
+                output = created
                 ParcelFileDescriptor.AutoCloseOutputStream(fd).use { stream ->
                     carver.copy(
                         file.id,

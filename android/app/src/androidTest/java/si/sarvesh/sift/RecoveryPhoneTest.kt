@@ -66,19 +66,23 @@ class RecoveryPhoneTest {
         val model = model()
         compose.onNodeWithText("Recover data").performClick()
         scan(model)
-        compose.onNodeWithText("6 candidate files").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Grid view").performScrollTo().performClick()
+        val grid = compose.onNodeWithTag("recovery-files")
+        grid.performScrollToNode(hasText("6 candidate files"))
+        compose.onNodeWithText("6 candidate files").assertIsDisplayed()
+        grid.performScrollToNode(hasText("Grid view"))
+        compose.onNodeWithText("Grid view").performClick()
         val first = model.state.value.report!!.files.first()
+        grid.performScrollToNode(hasContentDescription("Select ${first.name}"))
         compose
             .onNodeWithContentDescription("Select ${first.name}", useUnmergedTree = true)
-            .performScrollTo()
             .performClick()
-        compose.onNodeWithText("List view").performScrollTo().performClick()
+        grid.performScrollToNode(hasText("List view"))
+        compose.onNodeWithText("List view").performClick()
+        grid.performScrollToNode(hasContentDescription("Select ${first.name}"))
         compose
             .onNodeWithContentDescription("Select ${first.name}", useUnmergedTree = true)
-            .performScrollTo()
             .assertIsOn()
-        compose.onNode(hasText(first.name) and !hasSetTextAction()).performScrollTo().performClick()
+        compose.onNode(hasText(first.name) and !hasSetTextAction()).performClick()
         compose.onNodeWithText("Recover this file only").assertIsDisplayed()
         compose.onNodeWithText("Close", useUnmergedTree = true).performClick()
         compose.runOnIdle { model.export(destination) }
@@ -115,41 +119,34 @@ class RecoveryPhoneTest {
     }
 
     @Test
-    fun imageRecoveryNeedsNoAllFilesAccess() {
-        reset()
-        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        automation
-            .executeShellCommand("appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE deny")
-            .let {
-                android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().use {
-                    reader ->
-                    reader.readText()
-                }
-            }
-        try {
-            assertFalse(android.os.Environment.isExternalStorageManager())
-            val model = model()
-            scan(model)
-            assertEquals(6, model.state.value.report!!.files.size)
-        } finally {
-            automation
-                .executeShellCommand("appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE allow")
-                .let {
-                    android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().use {
-                        reader ->
-                        reader.readText()
-                    }
-                }
-        }
-    }
-
-    @Test
     fun providerSourceAliasIsRefusedWithoutTruncatingOrDeletingTheImage() {
         reset()
         val original = resolver.openInputStream(source)!!.use { it.readBytes() }
         val model = model()
         scan(model)
         resolver.call(Uri.parse("content://$authority"), "sift.test.source-alias", null, null)
+        compose.runOnIdle {
+            model.select(setOf(model.state.value.report!!.files.first().id))
+            model.export(DocumentsContract.buildTreeDocumentUri(authority, "root"))
+        }
+        waitIdle(model)
+        assertTrue(model.state.value.result!!.exported.isEmpty())
+        assertEquals(1, model.state.value.result!!.failed.size)
+        assertArrayEquals(original, resolver.openInputStream(source)!!.use { it.readBytes() })
+    }
+
+    @Test
+    fun aFailedDestinationOpenCannotDeleteAReadOnlySourceAlias() {
+        reset()
+        val original = resolver.openInputStream(source)!!.use { it.readBytes() }
+        val model = model()
+        scan(model)
+        resolver.call(
+            Uri.parse("content://$authority"),
+            "sift.test.source-alias-read-only",
+            null,
+            null,
+        )
         compose.runOnIdle {
             model.select(setOf(model.state.value.report!!.files.first().id))
             model.export(DocumentsContract.buildTreeDocumentUri(authority, "root"))

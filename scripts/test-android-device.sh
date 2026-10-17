@@ -15,17 +15,24 @@ done
 if [ "$onboarding" != 1 ]; then adb logcat -d -t 1000; exit 1; fi
 adb exec-out screencap -p > "android-device-results/onboarding-api-$1.png"
 adb shell am force-stop si.sarvesh.sift
+# Permission revocation kills Android's app process. Exercise permission-free image
+# recovery in its own invocation while access is already denied, then stop before granting.
+adb shell am instrument -w -r -e class si.sarvesh.sift.RecoveryWithoutPermissionTest si.sarvesh.sift.test/androidx.test.runner.AndroidJUnitRunner > android-device-results/no-storage-access.txt
+adb shell am force-stop si.sarvesh.sift
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE allow
-adb shell am instrument -w -r si.sarvesh.sift.test/androidx.test.runner.AndroidJUnitRunner > android-device-results/instrumentation.txt
+adb shell am instrument -w -r -e notClass si.sarvesh.sift.RecoveryWithoutPermissionTest si.sarvesh.sift.test/androidx.test.runner.AndroidJUnitRunner > android-device-results/instrumentation.txt
 adb pull /sdcard/Android/data/si.sarvesh.sift/cache/sift-grid.png "android-device-results/grid-api-$1.png" || true
 adb pull /sdcard/Android/data/si.sarvesh.sift/cache/sift-recovery.png "android-device-results/recovery-api-$1.png" || true
+adb logcat -d -t 2000 > android-device-results/logcat.txt
+cat android-device-results/no-storage-access.txt
 cat android-device-results/instrumentation.txt
 python3 - <<'PY'
 from pathlib import Path
 import re
-s=Path('android-device-results/instrumentation.txt').read_text()
-if not re.search(r'OK \(\d+ tests?\)', s) or any(x in s for x in ['FAILURES!!!', 'INSTRUMENTATION_FAILED', 'Process crashed']):
-    raise SystemExit('Android instrumented tests did not all pass')
+for name in ['no-storage-access.txt','instrumentation.txt']:
+    s=Path('android-device-results',name).read_text()
+    if not re.search(r'OK \(\d+ tests?\)', s) or any(x in s for x in ['FAILURES!!!', 'INSTRUMENTATION_FAILED', 'Process crashed']):
+        raise SystemExit(f'Android instrumented tests did not all pass: {name}')
 PY
 adb shell am start -n si.sarvesh.sift/.MainActivity
 # Give the first Compose frame time to draw before capturing the actual emulator UI.
