@@ -254,10 +254,17 @@ class StorageEngine(private val context: Context,
                 val original = decode(json.getJSONObject("original")); insideRoot(File(original.path))
                 val destination = File(bin, id)
                 if (!destination.exists()) return@runCatching null
-                val stored = if (json.has("stored")) decode(json.getJSONObject("stored")) else checked(destination)
-                require(stored.path == destination.path && stored.size == original.size)
-                unchanged(stored, true)
-                TrashEntry(id, original, stored, json.getLong("trashedAt"))
+                val current = checked(destination)
+                require(current.size == original.size) { "Trash file size changed." }
+                if (json.has("stored")) {
+                    val stored = decode(json.getJSONObject("stored"))
+                    require(stored.path == destination.path && current.size == stored.size && current.modified == stored.modified) { "Trash file changed." }
+                }
+                // Mount/device and FUSE inode IDs are not persistent across
+                // reboots. The private UUID path, size and mtime identify the
+                // journaled item; use freshly checked IDs for this operation.
+                unchanged(current, true)
+                TrashEntry(id, original, current, json.getLong("trashedAt"))
             }.getOrElse { unreadableTrashRecords++; null }
         }.sortedByDescending { it.trashedAt }
     }

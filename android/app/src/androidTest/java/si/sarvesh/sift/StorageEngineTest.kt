@@ -82,7 +82,14 @@ class StorageEngineTest {
     }
     @Test fun emptyTrashRequiresConfirmationAndPersistsAcrossSessions() = fixture {root,bin,index,engine ->
         val file=File(root,"selected").apply{writeText("content")};scan(engine);clean(engine,setOf(file.path),Action.TRASH)
+        val previous=engine.trash().single()
+        val manifest=File(index,"${previous.id}.json")
+        val json=org.json.JSONObject(manifest.readText());val stored=json.getJSONObject("stored")
+        stored.put("device",previous.stored.device+1).put("inode",previous.stored.inode+1)
+        manifest.writeText(json.toString())
         val reopened=StorageEngine(context,root,bin,index);val entry=reopened.trash().single()
+        assertEquals(previous.stored.device,entry.stored.device)
+        assertEquals(previous.stored.inode,entry.stored.inode)
         expectFailure{reopened.manageTrash(setOf(entry.id),false,"wrong"){_,_->}}
         assertTrue(reopened.trash().isNotEmpty())
         val result=reopened.manageTrash(setOf(entry.id),false,"DELETE 1 FILE"){_,_->}
