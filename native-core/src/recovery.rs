@@ -1,5 +1,7 @@
 //! Read-only carving of contiguous files from a user-selected regular disk image.
 //! This deliberately makes no filesystem undelete or original-name claim.
+#[cfg(windows)]
+mod windows_source;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
@@ -10,6 +12,12 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+#[cfg(windows)]
+pub use windows_source::drives;
+#[cfg(unix)]
+mod unix_source;
+#[cfg(unix)]
+pub use unix_source::drives;
 
 const BLOCK: usize = 1024 * 1024;
 const MAX_FILE: u64 = 512 * 1024 * 1024;
@@ -35,6 +43,8 @@ pub struct Candidate {
     pub size: u64,
     pub evidence: String,
     pub sha256: String,
+    pub original_path: Option<String>,
+    pub recoverable: bool,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +95,10 @@ pub struct RecoverySession {
     identity: String,
     size: u64,
     modified: u128,
+    undelete: Option<sift_undelete::Undelete>,
+    live_drive: Option<char>,
+    #[cfg(unix)]
+    direct_source: Option<unix_source::Drive>,
     pub report: RecoveryReport,
 }
 fn error(e: impl std::fmt::Display) -> String {
@@ -98,6 +112,76 @@ fn stopped(cancel: &AtomicBool) -> Result<(), String> {
     }
 }
 impl RecoverySession {
+    #[cfg(unix)]
+    pub fn open_drive(id: &str) -> Result<Self, String> {
+        let selected = unix_source::selected(id)?;
+        let source = unix_source::open(&selected)?;
+        let size = selected.size;
+        if size > MAX_JSON_INTEGER || size < 4096 {
+            return Err("Unsupported storage size".into());
+        }
+        Ok(Self {
+            source,
+            path: PathBuf::from(id),
+            identity: format!("direct-{id}"),
+            size,
+            modified: 0,
+            undelete: None,
+            live_drive: None,
+            direct_source: Some(selected),
+            report: RecoveryReport {
+                source: format!("{id} (direct drive)"),
+                source_bytes: size,
+                scanned_bytes: 0,
+                files: vec![],
+                rejected_headers: 0,
+                cancelled: false,
+                limited: false,
+                elapsed_ms: 0,
+                method: "ntfs-deleted-records-v1",
+            },
+        })
+    }
+    #[cfg(windows)]
+    pub fn open_drive(id: &str) -> Result<Self, String> {
+        let drive = windows_source::validate_drive(id)?;
+        let path = PathBuf::from(format!(r"\\.\{drive}:"));
+        use std::os::windows::fs::OpenOptionsExt;
+        let mut source=OpenOptions::new().read(true).share_mode(3).open(&path).map_err(|e|format!("Cannot read {drive}: as a raw volume: {e}. Use ‘Enable drive access’ to open the recovery-only administrator window."))?;
+        let mut boot = [0; 4096];
+        source.read_exact(&mut boot).map_err(error)?;
+        let size = if &boot[3..11] == b"NTFS    " {
+            let sector = u16::from_le_bytes(boot[11..13].try_into().unwrap()) as u64;
+            u64::from_le_bytes(boot[40..48].try_into().unwrap())
+                .checked_mul(sector)
+                .ok_or("Invalid NTFS size")?
+        } else {
+            windows_source::length(&source)?
+        };
+        if size > MAX_JSON_INTEGER || size < 4096 {
+            return Err("Unsupported NTFS volume size".into());
+        }
+        Ok(Self {
+            source,
+            path,
+            identity: format!("volume-{drive}"),
+            size,
+            modified: 0,
+            undelete: None,
+            live_drive: Some(drive),
+            report: RecoveryReport {
+                source: format!("{drive}: (direct drive)"),
+                source_bytes: size,
+                scanned_bytes: 0,
+                files: vec![],
+                rejected_headers: 0,
+                cancelled: false,
+                limited: false,
+                elapsed_ms: 0,
+                method: "ntfs-deleted-records-v1",
+            },
+        })
+    }
     pub fn open(path: &Path) -> Result<Self, String> {
         // Never accept block devices, symlinks, reparse points, or cloud placeholders.
         let meta = fs::symlink_metadata(path).map_err(error)?;
@@ -152,12 +236,23 @@ impl RecoverySession {
             identity,
             size,
             modified,
+            undelete: None,
+            live_drive: None,
+            #[cfg(unix)]
+            direct_source: None,
             report,
         };
         result.unchanged()?;
         Ok(result)
     }
     fn unchanged(&self) -> Result<(), String> {
+        #[cfg(unix)]
+        if self.direct_source.is_some() {
+            return Ok(());
+        }
+        if self.live_drive.is_some() {
+            return Ok(());
+        }
         let metadata = self.source.metadata().map_err(error)?;
         let path_metadata = fs::symlink_metadata(&self.path).map_err(error)?;
         if !path_metadata.is_file()
@@ -176,12 +271,75 @@ impl RecoverySession {
     pub fn scan(
         &mut self,
         cancel: &AtomicBool,
+        progress: impl FnMut(RecoveryProgress),
+    ) -> Result<RecoveryReport, String> {
+        self.scan_deleted(cancel, progress)
+    }
+    pub fn scan_deleted(
+        &mut self,
+        cancel: &AtomicBool,
         mut progress: impl FnMut(RecoveryProgress),
     ) -> Result<RecoveryReport, String> {
         self.unchanged()?;
         let start = Instant::now();
+        let engine = sift_undelete::Undelete::scan(
+            &self.source,
+            self.size,
+            cancel,
+            |done, total, found| {
+                progress(RecoveryProgress {
+                    bytes: done,
+                    total,
+                    found,
+                    phase: "Reading NTFS deleted file records",
+                });
+            },
+        )?;
+        self.report.files = engine
+            .scan
+            .files
+            .iter()
+            .map(|f| Candidate {
+                id: f.id.clone(),
+                name: f.name.clone(),
+                category: crate::category(Path::new(&f.name)).into(),
+                format: Path::new(&f.name)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("")
+                    .to_ascii_lowercase(),
+                offset: f.offset,
+                size: f.size,
+                evidence: f.evidence.clone(),
+                sha256: String::new(),
+                original_path: Some(f.original_path.clone()),
+                recoverable: f.recoverable,
+            })
+            .collect();
+        self.report.rejected_headers = engine.scan.skipped;
+        self.report.cancelled = engine.scan.cancelled;
+        self.report.limited = engine.scan.limited;
+        self.report.method = "ntfs-deleted-records-v1";
+        self.report.scanned_bytes = engine.scan.records_examined;
+        self.report.elapsed_ms = start.elapsed().as_millis() as u64;
+        self.undelete = Some(engine);
+        self.unchanged()?;
+        Ok(self.report.clone())
+    }
+    pub fn scan_carved(
+        &mut self,
+        cancel: &AtomicBool,
+        mut progress: impl FnMut(RecoveryProgress),
+    ) -> Result<RecoveryReport, String> {
+        self.undelete = None;
+        self.report.method = "contiguous-signature-carving-v1";
+        self.unchanged()?;
+        let start = Instant::now();
         let mut reader = Probe {
-            file: BufReader::with_capacity(64 * 1024, &self.source),
+            file: BufReader::with_capacity(
+                64 * 1024,
+                sift_undelete::Volume::new(&self.source, 0, self.size),
+            ),
             size: self.size,
             budget: self.size.saturating_mul(4).saturating_add(MAX_FILE),
             cancel,
@@ -246,6 +404,8 @@ impl RecoverySession {
                                 size,
                                 evidence: evidence.into(),
                                 sha256,
+                                original_path: None,
+                                recoverable: true,
                             });
                             skip = offset + size;
                             index = skip.saturating_sub(position).min(covered as u64) as usize;
@@ -291,11 +451,12 @@ impl RecoverySession {
             return Ok(None);
         }
         let mut bytes = vec![0; candidate.size as usize];
-        self.source
-            .seek(SeekFrom::Start(candidate.offset))
-            .map_err(error)?;
-        self.source.read_exact(&mut bytes).map_err(error)?;
-        if hex(&Sha256::digest(&bytes)) != candidate.sha256 {
+        let cancel = AtomicBool::new(false);
+        if let Some(engine) = &self.undelete {
+            engine.validate(&self.source, id, &cancel)?;
+        }
+        self.read_candidate(candidate, 0, &mut bytes)?;
+        if !candidate.sha256.is_empty() && hex(&Sha256::digest(&bytes)) != candidate.sha256 {
             return Err("Source contents changed; scan again.".into());
         }
         let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes))
@@ -312,7 +473,29 @@ impl RecoverySession {
             .map(crate::preview::picture)
             .transpose()?;
         self.unchanged()?;
+        if let Some(engine) = &self.undelete {
+            engine.validate(&self.source, id, &cancel)?;
+        }
         Ok(preview)
+    }
+    fn read_candidate(
+        &self,
+        candidate: &Candidate,
+        offset: u64,
+        bytes: &mut [u8],
+    ) -> Result<(), String> {
+        if let Some(engine) = &self.undelete {
+            if engine.read(&self.source, &candidate.id, offset, bytes)? != bytes.len() {
+                return Err("Truncated deleted stream".into());
+            }
+        } else {
+            let mut source = sift_undelete::Volume::new(&self.source, 0, self.size);
+            source
+                .seek(SeekFrom::Start(candidate.offset + offset))
+                .map_err(error)?;
+            source.read_exact(bytes).map_err(error)?;
+        }
+        Ok(())
     }
     pub fn export(
         &mut self,
@@ -334,6 +517,18 @@ impl RecoverySession {
         let destination = fs::canonicalize(destination).map_err(error)?;
         if !destination.is_dir() {
             return Err("Choose an existing destination folder.".into());
+        }
+        #[cfg(unix)]
+        if let Some(source) = &self.direct_source {
+            unix_source::destination_allowed(source, &destination)?;
+        }
+        if let Some(drive) = self.live_drive {
+            #[cfg(windows)]
+            if windows_source::same_volume(&destination, drive)? {
+                return Err("Choose a different drive. Saving to the source volume could overwrite deleted data.".into());
+            }
+            #[cfg(not(windows))]
+            let _ = drive;
         }
         stopped(cancel)?;
         let stamp = SystemTime::now()
@@ -366,17 +561,53 @@ impl RecoverySession {
             .collect();
         let total: u64 = candidates.iter().map(|f| f.size).sum();
         let mut copied = 0;
-        for candidate in candidates {
+        for mut candidate in candidates {
             if cancel.load(Ordering::Relaxed) {
                 result.cancelled = true;
                 break;
             }
             let folder = directory.join(&candidate.category);
-            let path = folder.join(&candidate.name);
+            // Never interpret a recovered filename or folder as a destination path.
+            // The stable record ID prevents duplicate-name collisions and traversal.
+            let safe_name: String = candidate
+                .name
+                .chars()
+                .map(|c| {
+                    if c.is_control() || "<>:\"/\\|?*".contains(c) {
+                        '_'
+                    } else {
+                        c
+                    }
+                })
+                .scan(0usize, |bytes, c| {
+                    if *bytes + c.len_utf8() > 160 {
+                        None
+                    } else {
+                        *bytes += c.len_utf8();
+                        Some(c)
+                    }
+                })
+                .collect();
+            let output_name = if self.undelete.is_some() {
+                format!(
+                    "{}-{}",
+                    candidate.id,
+                    safe_name.trim_end_matches([' ', '.'])
+                )
+            } else {
+                candidate.name.clone()
+            };
+            let path = folder.join(&output_name);
             let partial = path.with_extension(format!("{}.partial", candidate.format));
             let mut created = false;
             let outcome: Result<(), String> = (|| {
                 self.unchanged()?;
+                if !candidate.recoverable {
+                    return Err(candidate.evidence.clone());
+                }
+                if let Some(engine) = &self.undelete {
+                    engine.validate(&self.source, &candidate.id, cancel)?;
+                }
                 if !folder.exists() {
                     builder.create(&folder).map_err(error)?;
                 }
@@ -387,16 +618,13 @@ impl RecoverySession {
                     .open(&partial)
                     .map_err(error)?;
                 created = true;
-                self.source
-                    .seek(SeekFrom::Start(candidate.offset))
-                    .map_err(error)?;
                 let mut remaining = candidate.size;
                 let mut buffer = vec![0u8; BLOCK];
                 let mut hash = Sha256::new();
                 while remaining > 0 {
                     stopped(cancel)?;
                     let n = remaining.min(BLOCK as u64) as usize;
-                    self.source.read_exact(&mut buffer[..n]).map_err(error)?;
+                    self.read_candidate(&candidate, candidate.size - remaining, &mut buffer[..n])?;
                     file.write_all(&buffer[..n]).map_err(error)?;
                     hash.update(&buffer[..n]);
                     remaining -= n as u64;
@@ -409,7 +637,8 @@ impl RecoverySession {
                     });
                 }
                 file.sync_all().map_err(error)?;
-                if hex(&hash.finalize()) != candidate.sha256 {
+                let copied_hash = hex(&hash.finalize());
+                if !candidate.sha256.is_empty() && copied_hash != candidate.sha256 {
                     return Err("Source bytes differ from the recovery scan.".into());
                 }
                 file.seek(SeekFrom::Start(0)).map_err(error)?;
@@ -422,10 +651,30 @@ impl RecoverySession {
                     }
                     hash.update(&buffer[..n]);
                 }
-                if hex(&hash.finalize()) != candidate.sha256 {
+                if hex(&hash.finalize()) != copied_hash {
                     return Err("Destination read-back did not match.".into());
                 }
                 self.unchanged()?;
+                if let Some(engine) = &self.undelete {
+                    engine.validate(&self.source, &candidate.id, cancel)?;
+                    // Read the source again: a live drive can change without file timestamps.
+                    let mut source_hash = Sha256::new();
+                    let mut at = 0;
+                    while at < candidate.size {
+                        stopped(cancel)?;
+                        let n = (candidate.size - at).min(BLOCK as u64) as usize;
+                        self.read_candidate(&candidate, at, &mut buffer[..n])?;
+                        source_hash.update(&buffer[..n]);
+                        at += n as u64;
+                    }
+                    if hex(&source_hash.finalize()) != copied_hash {
+                        return Err(
+                            "Source data changed during recovery. Rescan a stable image.".into(),
+                        );
+                    }
+                    engine.validate(&self.source, &candidate.id, cancel)?;
+                    candidate.sha256 = copied_hash;
+                }
                 drop(file);
                 publish_no_replace(&partial, &path)?;
                 Ok(())
@@ -453,7 +702,12 @@ impl RecoverySession {
         }
         result.cancelled |= cancel.load(Ordering::Relaxed);
         let manifest_path = directory.join("recovery-manifest.json");
-        let manifest = serde_json::json!({ "schemaVersion": 1, "method": self.report.method, "source": self.report.source, "sourceBytes": self.size, "requestedIds": ids, "notice": "Contiguous file carving. Original names, folders, deleted status, and readability are unknown. Source opened read-only. Exports SHA-256 checked and read back.", "result": result });
+        let notice = if self.undelete.is_some() {
+            "Deleted NTFS records. Original paths are metadata evidence, never output instructions. Unallocated clusters can contain overwritten or TRIMmed bytes; readability is not guaranteed. Source is read-only. Export hashes compare copied bytes, destination read-back, and a second source read."
+        } else {
+            "Contiguous file carving. Original names, folders, deleted status, and readability are unknown. Source opened read-only. Exports SHA-256 checked and read back."
+        };
+        let manifest = serde_json::json!({ "schemaVersion": 2, "method": self.report.method, "source": self.report.source, "sourceBytes": self.size, "requestedIds": ids, "notice": notice, "result": result });
         match (|| {
             let mut file = OpenOptions::new()
                 .write(true)
@@ -525,7 +779,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 struct Probe<'a> {
-    file: BufReader<&'a File>,
+    file: BufReader<sift_undelete::Volume<'a>>,
     size: u64,
     budget: u64,
     cancel: &'a AtomicBool,
@@ -853,6 +1107,54 @@ fn identify(p: &mut Probe<'_>, base: u64) -> Result<Match, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn deleted_ntfs_records_export_original_contents_with_hashes_and_path_evidence() {
+        let source = tempfile::NamedTempFile::new().unwrap();
+        let mut gzip = flate2::read::GzDecoder::new(
+            &include_bytes!("../../recovery-fixtures/ntfs-deleted.img.gz")[..],
+        );
+        std::io::copy(&mut gzip, &mut source.as_file()).unwrap();
+        let before = hex(&Sha256::digest(std::fs::read(source.path()).unwrap()));
+        let cancel = AtomicBool::new(false);
+        let mut session = RecoverySession::open(source.path()).unwrap();
+        let report = session.scan(&cancel, |_| {}).unwrap();
+        assert_eq!(report.files.len(), 2);
+        assert_eq!(report.method, "ntfs-deleted-records-v1");
+        let destination = tempfile::tempdir().unwrap();
+        let ids = report
+            .files
+            .iter()
+            .map(|f| f.id.clone())
+            .collect::<Vec<_>>();
+        let result = session
+            .export(destination.path(), &ids, &cancel, |_| {})
+            .unwrap();
+        assert_eq!(result.exported.len(), 2);
+        assert!(result.failed.is_empty());
+        for output in &result.exported {
+            let data = std::fs::read(&output.path).unwrap();
+            assert_eq!(hex(&Sha256::digest(&data)), output.candidate.sha256);
+            assert!(output
+                .candidate
+                .original_path
+                .as_ref()
+                .unwrap()
+                .starts_with("/Projects/"));
+            if output.candidate.name == "meeting-notes.txt" {
+                assert_eq!(
+                    data,
+                    b"These notes were permanently deleted, outside any recycle bin.\n"
+                );
+            }
+        }
+        let manifest: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(result.manifest.unwrap()).unwrap()).unwrap();
+        assert_eq!(manifest["method"], "ntfs-deleted-records-v1");
+        assert_eq!(
+            before,
+            hex(&Sha256::digest(std::fs::read(source.path()).unwrap()))
+        );
+    }
     const SAMPLE: &[u8] = include_bytes!("../../recovery-fixtures/sample.img");
     fn fixture() -> (tempfile::TempDir, PathBuf) {
         let dir = tempfile::tempdir().unwrap();
@@ -862,7 +1164,9 @@ mod tests {
     }
     fn run(path: &Path) -> RecoverySession {
         let mut session = RecoverySession::open(path).unwrap();
-        session.scan(&AtomicBool::new(false), |_| {}).unwrap();
+        session
+            .scan_carved(&AtomicBool::new(false), |_| {})
+            .unwrap();
         session
     }
     #[test]
@@ -944,7 +1248,7 @@ mod tests {
         assert_eq!(result.failed.len(), 1);
         assert_eq!(fs::read(&path).unwrap(), SAMPLE);
         let mut session = RecoverySession::open(&path).unwrap();
-        let report = session.scan(&cancel, |_| {}).unwrap();
+        let report = session.scan_carved(&cancel, |_| {}).unwrap();
         assert!(report.cancelled);
         assert!(report.files.is_empty());
     }
@@ -1041,6 +1345,8 @@ mod tests {
         let mut session = run(&path);
         fs::remove_file(&path).unwrap();
         fs::write(&path, SAMPLE).unwrap();
-        assert!(session.scan(&AtomicBool::new(false), |_| {}).is_err());
+        assert!(session
+            .scan_carved(&AtomicBool::new(false), |_| {})
+            .is_err());
     }
 }

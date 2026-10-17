@@ -50,10 +50,24 @@ internal data class RecoveryState(
     val error: String? = null,
     val result: RecoveryExportResult? = null,
     val session: String = "",
+    val storageId: String = "primary",
 )
 
 /** A retained, read-only document descriptor. No copying the image onto the affected storage. */
-internal class RecoveryDocument(resolver: ContentResolver, val uri: Uri) : Closeable {
+internal interface RecoveryInput : Closeable {
+    val uri: Uri?
+    val carver: RecoveryReader
+
+    fun sameFile(fd: java.io.FileDescriptor): Boolean
+
+    fun validateDestination(tree: Uri) {}
+}
+
+internal class RecoveryDocument(
+    resolver: ContentResolver,
+    override val uri: Uri,
+    carving: Boolean = false,
+) : RecoveryInput {
     private val descriptor =
         resolver.openFileDescriptor(uri, "r") ?: error("Image could not be opened.")
     private val stream = ParcelFileDescriptor.AutoCloseInputStream(descriptor)
@@ -75,9 +89,10 @@ internal class RecoveryDocument(resolver: ContentResolver, val uri: Uri) : Close
                 }
             }
             .getOrNull() ?: "Disk image"
-    val carver =
+    override val carver: RecoveryReader =
         try {
-            RecoveryCarver(stream.channel, name, ::unchanged)
+            if (carving) RecoveryCarver(stream.channel, name, ::unchanged)
+            else NtfsRecoveryReader(descriptor.fd, name, before.st_size, ::unchanged)
         } catch (e: Exception) {
             stream.close()
             throw e
@@ -98,13 +113,14 @@ internal class RecoveryDocument(resolver: ContentResolver, val uri: Uri) : Close
         }
     }
 
-    fun sameFile(fd: java.io.FileDescriptor): Boolean {
+    override fun sameFile(fd: java.io.FileDescriptor): Boolean {
         val stat = Os.fstat(fd)
         return stat.st_dev == before.st_dev && stat.st_ino == before.st_ino
     }
 
     override fun close() {
-        carver.cancel.set(true)
+        carver.setCancelled(true)
+        carver.close()
         stream.close()
     }
 }
@@ -119,12 +135,18 @@ internal fun RecoveryFile.json() =
         .put("size", size)
         .put("evidence", evidence)
         .put("sha256", sha256)
+        .put("originalPath", originalPath)
+        .put("recoverable", recoverable)
+        .put("origin", origin)
+        .put("width", width)
+        .put("height", height)
 
 internal class RecoveryViewModel(application: Application) : AndroidViewModel(application) {
     private val resolver = application.contentResolver
     private val mutable = MutableStateFlow(RecoveryState())
     val state = mutable.asStateFlow()
-    @Volatile private var document: RecoveryDocument? = null
+    @Volatile private var document: RecoveryInput? = null
+    @Volatile private var rootOpening: RootBlockChannel? = null
     private val stopRequested = java.util.concurrent.atomic.AtomicBoolean(false)
     private val previewSlots = Semaphore(2)
     private val cache =
@@ -136,7 +158,7 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
     private fun work(action: () -> Unit) {
         if (mutable.value.busy) return
         stopRequested.set(false)
-        document?.carver?.cancel?.set(false)
+        document?.carver?.setCancelled(false)
         mutable.update { it.copy(busy = true, error = null, progress = null) }
         viewModelScope.launch {
             try {
@@ -144,13 +166,13 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
             } catch (e: Exception) {
                 mutable.update { it.copy(error = e.message ?: "Recovery could not complete.") }
             } finally {
-                document?.carver?.cancel?.set(false)
+                document?.carver?.setCancelled(false)
                 mutable.update { it.copy(busy = false, progress = null) }
             }
         }
     }
 
-    fun scan(uri: Uri) = work {
+    fun scan(uri: Uri, carving: Boolean = false) = work {
         document?.close()
         document = null
         cache.evictAll()
@@ -162,24 +184,92 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                 session = UUID.randomUUID().toString(),
             )
         }
-        val next = RecoveryDocument(resolver, uri)
+        val next = RecoveryDocument(resolver, uri, carving)
         document = next
-        next.carver.cancel.set(stopRequested.get())
+        next.carver.setCancelled(stopRequested.get())
         val report =
             next.carver.scan { progress -> mutable.update { it.copy(progress = progress) } }
         mutable.update { it.copy(report = report) }
+    }
+
+    fun scanPhone() = work {
+        check(android.os.Environment.isExternalStorageManager()) {
+            "Allow storage access to search this phone's shared cache and hidden folders."
+        }
+        document?.close()
+        document = null
+        cache.evictAll()
+        mutable.update {
+            it.copy(
+                report = null,
+                result = null,
+                selected = emptySet(),
+                session = UUID.randomUUID().toString(),
+            )
+        }
+        val root =
+            storageSources(getApplication()).firstOrNull { it.id == mutable.value.storageId }?.root
+                ?: error("Choose a mounted storage device.")
+        val next = PhoneRecoveryInput(root)
+        document = next
+        next.carver.setCancelled(stopRequested.get())
+        val report =
+            next.carver.scan { progress -> mutable.update { it.copy(progress = progress) } }
+        mutable.update { it.copy(report = report) }
+    }
+
+    fun selectStorage(id: String) = work {
+        check(storageSources(getApplication()).any { it.id == id }) {
+            "That device is no longer mounted."
+        }
+        document?.close()
+        document = null
+        cache.evictAll()
+        mutable.value = RecoveryState(busy = true, storageId = id)
+    }
+
+    fun scanRootedPhone() = work {
+        document?.close()
+        document = null
+        cache.evictAll()
+        mutable.update {
+            it.copy(
+                report = null,
+                result = null,
+                selected = emptySet(),
+                session = UUID.randomUUID().toString(),
+                progress = RecoveryProgress(0, 0, 0, "Waiting for root consent · read-only access"),
+            )
+        }
+        try {
+            val next =
+                RootRecoveryInput(getApplication(), mutable.value.storageId) { channel ->
+                    rootOpening = channel
+                    if (stopRequested.get()) channel.close()
+                }
+            document = next
+            rootOpening = null
+            next.carver.setCancelled(stopRequested.get())
+            val report = next.carver.scan { p -> mutable.update { it.copy(progress = p) } }
+            mutable.update { it.copy(report = report) }
+        } finally {
+            rootOpening?.close()
+            rootOpening = null
+        }
     }
 
     fun closeImage() = work {
         document?.close()
         document = null
         cache.evictAll()
-        mutable.value = RecoveryState(busy = true)
+        mutable.value = RecoveryState(busy = true, storageId = mutable.value.storageId)
     }
 
     fun select(ids: Set<String>) {
         if (!mutable.value.busy) {
-            val allowed = mutable.value.report?.files?.map { it.id }?.toSet() ?: emptySet()
+            val allowed =
+                mutable.value.report?.files?.filter { it.recoverable }?.map { it.id }?.toSet()
+                    ?: emptySet()
             mutable.update { it.copy(selected = ids.intersect(allowed)) }
         }
     }
@@ -191,7 +281,8 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
 
     fun stop() {
         stopRequested.set(true)
-        document?.carver?.cancel?.set(true)
+        rootOpening?.close()
+        document?.carver?.setCancelled(true)
     }
 
     fun dismiss() {
@@ -231,7 +322,7 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
     private class ExistingDestination :
         Exception("Destination was not a new empty regular file; left unchanged.")
 
-    private fun newOutput(uri: Uri, source: RecoveryDocument): ParcelFileDescriptor {
+    private fun newOutput(uri: Uri, source: RecoveryInput): ParcelFileDescriptor {
         // "rw" does not truncate. Verify the fresh descriptor before the first write,
         // including when a provider returns a different URI alias for the source.
         val fd = resolver.openFileDescriptor(uri, "rw") ?: error("Destination is not writable.")
@@ -253,6 +344,7 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
     fun export(tree: Uri, ids: Set<String> = mutable.value.selected) = work {
         mutable.update { it.copy(result = null) }
         val source = document ?: error("Scan an image first.")
+        source.validateDestination(tree)
         val carver = source.carver
         val candidates = carver.report.files.filter { it.id in ids }
         require(ids.isNotEmpty() && candidates.size == ids.size) {
@@ -289,8 +381,16 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                             file.category,
                         ) ?: error("Could not create category folder.")
                     }
+                val safeName =
+                    file.name
+                        .map { if (it.isISOControl() || it in "<>:\"/\\|?*") '_' else it }
+                        .joinToString("")
+                        .take(140)
+                        .trimEnd(' ', '.')
+                val outputName =
+                    if (file.originalPath != null) "${file.id}-$safeName" else file.name
                 val created =
-                    DocumentsContract.createDocument(resolver, folder, file.mimeType, file.name)
+                    DocumentsContract.createDocument(resolver, folder, file.mimeType, outputName)
                         ?: error("Could not create destination file.")
                 require(created != source.uri && created != directory && created != folder) {
                     "Invalid destination document."
@@ -300,25 +400,27 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                 // cause deletion through a provider-supplied source URI alias.
                 val fd = newOutput(created, source)
                 output = created
+                var copiedHash = ""
                 ParcelFileDescriptor.AutoCloseOutputStream(fd).use { stream ->
-                    carver.copy(
-                        file.id,
-                        { bytes, n -> stream.write(bytes, 0, n) },
-                        { n ->
-                            copied += n
-                            mutable.update {
-                                it.copy(
-                                    progress =
-                                        RecoveryProgress(
-                                            copied,
-                                            total,
-                                            exported.size,
-                                            "Copying and verifying recovered files",
-                                        )
-                                )
-                            }
-                        },
-                    )
+                    copiedHash =
+                        carver.copy(
+                            file.id,
+                            { bytes, n -> stream.write(bytes, 0, n) },
+                            { n ->
+                                copied += n
+                                mutable.update {
+                                    it.copy(
+                                        progress =
+                                            RecoveryProgress(
+                                                copied,
+                                                total,
+                                                exported.size,
+                                                "Copying and verifying recovered files",
+                                            )
+                                    )
+                                }
+                            },
+                        )
                     stream.flush()
                     fd.fileDescriptor.sync()
                 }
@@ -333,10 +435,10 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
                         digest.update(buffer, 0, n)
                     }
                 } ?: error("Cannot read back the destination file.")
-                check(digest.digest().hex() == file.sha256) {
+                check(digest.digest().hex() == copiedHash) {
                     "Destination read-back did not match."
                 }
-                exported.add(RecoveredCopy(file, output.toString()))
+                exported.add(RecoveredCopy(file.copy(sha256 = copiedHash), output.toString()))
             } catch (e: Exception) {
                 if (e is ExistingDestination) output = null
                 val cleanup =
@@ -357,14 +459,19 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
         }
         val manifest =
             JSONObject()
-                .put("schemaVersion", 1)
+                .put("schemaVersion", 2)
                 .put("requestedIds", JSONArray(ids.toList()))
                 .put("method", carver.report.method)
                 .put("source", carver.report.source)
                 .put("sourceBytes", carver.size)
                 .put(
                     "notice",
-                    "Contiguous carving. Original names, folders, deleted status, and readability are unknown. Source read-only; exports SHA-256 checked and read back.",
+                    if (carver.report.method == "android-surviving-copies-v1")
+                        "Surviving bytes from accessible shared cache/hidden folders, not deleted-sector recovery. Original deletion status is unknown. Thumbnail dimensions and source evidence recorded when available. Private Android folders and bins excluded. Source read-only; hash-checked copies read back."
+                    else if (carver.report.method == "ntfs-deleted-records-v1")
+                        "Deleted NTFS records; original paths are metadata evidence. Unallocated data may be overwritten or TRIMmed. Source read-only; copies hashed and destination read back. Readability is not guaranteed."
+                    else
+                        "Contiguous carving. Original names, folders, deleted status, and readability are unknown. Source read-only; exports SHA-256 checked and read back.",
                 )
                 .put("cancelled", carver.cancel.get())
                 .put(
@@ -424,6 +531,7 @@ internal class RecoveryViewModel(application: Application) : AndroidViewModel(ap
     }
 
     override fun onCleared() {
+        rootOpening?.close()
         stopRequested.set(true)
         runCatching { document?.close() }
         cache.evictAll()

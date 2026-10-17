@@ -45,6 +45,11 @@ class RecoveryTestProvider : DocumentsProvider() {
                 requireNotNull(context).assets.open("sample.img").use { input ->
                     File(root, "sample.img").outputStream().use { input.copyTo(it) }
                 }
+                java.util.zip
+                    .GZIPInputStream(requireNotNull(context).assets.open("ntfs-deleted.img.gz"))
+                    .use { input ->
+                        File(root, "ntfs-deleted.img").outputStream().use { input.copyTo(it) }
+                    }
                 File(root, "destination").mkdir()
                 corruptReadback = false
                 aliasSource = false

@@ -46,3 +46,9 @@ jobs:
       - run: cargo fmt --manifest-path native-core/Cargo.toml --check
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - run: cargo test --manifest-path native-core/Cargo.toml --locked
+      - run: cargo fmt --manifest-path recovery-engine/Cargo.toml --check
+      - run: cargo test --manifest-path recovery-engine/Cargo.toml --locked
+      - name: Recover permanently deleted files directly from a disposable NTFS drive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-windows-undelete.ps1

@@ -3,15 +3,26 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val recoveryNative by tasks.registering(Exec::class) {
+    workingDir(rootProject.projectDir.parentFile)
+    commandLine("python3", "scripts/build-android-recovery.py")
+    inputs.dir("../../recovery-engine/src")
+    inputs.file("../../recovery-engine/Cargo.toml")
+    inputs.file("../../recovery-engine/Cargo.lock")
+    inputs.file("../../scripts/build-android-recovery.py")
+    outputs.dir(layout.buildDirectory.dir("generated/recoveryJniLibs"))
+}
+tasks.named("preBuild").configure { dependsOn(recoveryNative) }
 android {
     namespace = "si.sarvesh.sift"
     compileSdk = 36
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "si.sarvesh.sift"
         minSdk = 30
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -33,11 +44,13 @@ android {
     sourceSets.getByName("debug").assets.srcDir("../../recovery-fixtures")
     sourceSets.getByName("test").resources.srcDir("../../recovery-fixtures")
     sourceSets.getByName("androidTest").assets.srcDir("../../recovery-fixtures")
+    sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/recoveryJniLibs"))
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     lint { abortOnError = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging { jniLibs.useLegacyPackaging = true }
 }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.05.01"))

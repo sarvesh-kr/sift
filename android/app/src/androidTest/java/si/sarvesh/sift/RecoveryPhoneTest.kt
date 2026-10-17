@@ -44,19 +44,66 @@ class RecoveryPhoneTest {
     }
 
     private fun scan(model: RecoveryViewModel) {
-        compose.runOnIdle { model.scan(source) }
+        compose.runOnIdle { model.scan(source, carving = true) }
         waitIdle(model)
         assertEquals(6, model.state.value.report!!.files.size)
     }
 
     @Test
-    fun chooserRecoveryEvidenceAndSiftTrashNavigationAreAccessible() {
+    fun chooserOpensActualUndeleteAndKeepsTrashOutOfRecovery() {
         compose.onNodeWithText("Recover data").performClick()
         compose.onNodeWithText("Some things deserve\na second chance.").assertIsDisplayed()
-        compose.onNodeWithText("Open Sift trash").performScrollTo().performClick()
-        compose.onNodeWithText("A second chance.").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Switch workspace").performClick()
-        compose.onNodeWithText("Choose disk image").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Open Sift trash").assertDoesNotExist()
+        compose
+            .onNodeWithTag("recovery-files")
+            .performScrollToNode(hasText("Look for what remains on your phone."))
+        compose.onNodeWithText("Look for what remains on your phone.").assertIsDisplayed()
+    }
+
+    @Test
+    fun deletedNtfsFilesRecoverThroughTheSameNativeEngineAsDesktop() {
+        reset()
+        val ntfsSource = DocumentsContract.buildDocumentUri(authority, "ntfs-deleted.img")
+        val before =
+            resolver.openInputStream(ntfsSource)!!.use {
+                MessageDigest.getInstance("SHA-256").digest(it.readBytes())
+            }
+        val model = model()
+        compose.onNodeWithText("Recover data").performClick()
+        compose.runOnIdle { model.scan(ntfsSource) }
+        waitIdle(model)
+        val report = model.state.value.report!!
+        assertEquals("ntfs-deleted-records-v1", report.method)
+        assertEquals(2, report.files.size)
+        assertTrue(
+            report.files.all { it.recoverable && it.originalPath!!.startsWith("/Projects/") }
+        )
+        compose.runOnIdle { model.export(destination, report.files.map { it.id }.toSet()) }
+        waitIdle(model)
+        val result = model.state.value.result!!
+        assertTrue(result.failed.isEmpty())
+        assertEquals(2, result.exported.size)
+        result.exported.forEach { copy ->
+            val bytes = resolver.openInputStream(Uri.parse(copy.uri))!!.use { it.readBytes() }
+            assertEquals(copy.file.sha256, MessageDigest.getInstance("SHA-256").digest(bytes).hex())
+            if (copy.file.name == "meeting-notes.txt")
+                assertEquals(
+                    "These notes were permanently deleted, outside any recycle bin.\n",
+                    String(bytes),
+                )
+            else
+                assertArrayEquals(
+                    ByteArray(4096) { ((it * 17 + 31) % 251).toByte() }
+                        .let { block -> ByteArray(49152) { block[it % 4096] } },
+                    bytes,
+                )
+        }
+        assertArrayEquals(
+            before,
+            resolver.openInputStream(ntfsSource)!!.use {
+                MessageDigest.getInstance("SHA-256").digest(it.readBytes())
+            },
+        )
     }
 
     @Test

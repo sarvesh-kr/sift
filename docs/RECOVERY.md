@@ -1,130 +1,41 @@
-# Recovery preview: desktop 0.5.0 / Android 0.3.0
+# Recovery in Sift 0.6 desktop / 0.4 Android
 
-Sift opens with **Clean data** and **Recover data** on every supported platform.
-The existing storage, duplicate, visual browsing, and cleanup tools live under
-Clean data. Recover data is a separate workspace. Desktop cleaning state remains
-in memory when switching modes; Android retains its model and saved navigation.
-Closing the app discards image-scan results; exported files and manifests persist.
+Recovery means finding lost or deleted file contents. The recovery workspace does not open a recycle bin. Cleaning and Sift trash remain in the cleaning workspace.
 
-## Two recovery paths
+## Choose the storage first
 
-1. **Trash:** desktop opens the operating system's Recycle Bin / trash so its
-   file manager can restore retained files with original names and paths. Sift
-   does not enumerate or silently restore unrelated system-trash entries.
-   Android opens Sift's existing durable trash/restore interface. Gallery / Photos
-   trash must be restored in that app. Uninstalling Sift deletes Sift trash.
-2. **Disk-image carving:** choose a stable, local, regular raw image file
-   (`.img`, `.dd`, `.raw`, or an equivalent uncompressed byte stream). Sift reads
-   the image and identifies supported contiguous file ranges. No live raw-disk
-   access, elevated privileges, rooting, or disk-image creation is implemented.
+Desktop cleaning uses the native folder/drive picker. Desktop recovery lists local drives and connected devices supplied by Windows, `lsblk` on Linux, or `diskutil` on macOS. Android cleaning and recovery list mounted internal shared storage and removable volumes exposed by Android's StorageManager. Unmounted, locked or Android-inaccessible devices cannot be scanned through these pickers. Disconnecting a device can invalidate a scan; reconnect and rescan.
 
-Stop writing to the affected drive before attempting recovery. Make a disk image
-with an appropriate imaging tool, then work from that image. Save exports to a
-different physical drive. Do not install Sift onto the disk you hope to recover.
-Failing hardware needs a separate acquisition strategy; this app does not repair
-physical damage or handle unreadable sectors like a forensic acquisition tool.
-
-## Actual format coverage and evidence
-
-| Format | Evidence checked | What is not established |
+| Operation | What it actually reads | Important limits |
 | --- | --- | --- |
-| JPEG | Frame/scan marker structure, segment bounds, stuffed/restart markers, EOI | Entropy decoding and visual integrity |
-| PNG | IHDR-first structure, IDAT, bounded chunks, every chunk CRC, IEND | Successful image decoding / full PNG semantic conformance |
-| WebP | RIFF declared length, chunk bounds and image/frame payload presence | Codec integrity or full animation reconstruction |
-| WAV | RIFF declared length, chunk bounds, format and data chunks | Audio decoding or semantic validity |
-| PDF | PDF version header and first `%%EOF` footer | Document structure, readability, encryption, incremental revisions after that footer |
-| ZIP | Single-volume classic EOCD, central-directory bounds, referenced local headers and data bounds | Payload CRCs, decompression, encryption, ZIP64, split archives |
+| Desktop NTFS undelete | Deleted NTFS master-file-table records and their data runs; resident, fragmented and sparse contents; surviving original names and directory paths | Reused clusters are blocked. Compressed/EFS data, NTFS extension records and complex MFT attribute lists are unsupported. Missing parent paths are marked unknown. |
+| Desktop deep signature scan | Readable bytes of the selected device, independent of filesystem | JPEG, PNG, WebP, PDF, classic ZIP and WAV; contiguous files only, maximum 512 MiB each. Existing files can appear. Original names, paths and deletion status are unknown. |
+| Android non-root phone/card scan | Accessible shared cache, hidden and `.nomedia` folders; supported embedded file contents | Surviving copies, sometimes only thumbnails. No deleted-sector or app-private access. Original deletion status is unknown; results can include copies of files that still exist. Dimensions are recorded for bounded decodable images. |
+| Android rooted deep scan (experimental) | The selected mounted internal userdata or supported card block device, using explicit `su` consent and a read-only native helper | Same six contiguous formats as deep scanning. Root does not undo file-based encryption, TRIM or overwrites. Original names, paths and deletion status are unknown. Root-manager/device compatibility needs real-device qualification. |
+| Advanced image tools | A user-selected local NTFS image, or separately selected signature carving of an image | Optional specialist tools; no image is needed for direct device scanning. Sift does not create disk images. |
 
-Archives remain archives; contents are never extracted or executed. OOXML, APK,
-and other ZIP containers may appear as `.zip`, with no original subtype inferred.
-There is no support in this release for MP4/MOV, HEIC/AVIF, MP3, RAW camera formats,
-fragment reassembly, filesystem metadata undelete, NTFS/FAT/exFAT/APFS/ext parsing,
-original filenames, deleted-directory trees, encrypted-volume unlocking, backups,
-or recoverable-file probability scores. A signature result can be a current file
-or a false positive: **deletion status and readability are unknown**. Nested
-signatures inside a successfully identified outer file are not listed separately.
+## Permissions and source protection
 
-A normal Android app cannot read deleted sectors of encrypted internal storage.
-All files access does not change this. Image recovery instead uses Android's
-Storage Access Framework document picker with a read-only descriptor; no broad
-storage permission is required for this path. The source must be local and
-seekable. Source metadata/descriptor identity is retained across configuration
-changes. An app/process restart requires choosing and scanning the image again.
-SSD TRIM, overwriting, encryption, and damage can make recovery impossible.
-No superiority over professional recovery tools or universal recovery is claimed.
+Windows drive scanning requires administrator access on standard installations. **Enable drive access** opens a recovery-only process through Windows UAC; its backend refuses cleanup requests. Linux and macOS device access depends on OS disk-read permissions. Where needed, use your administrator tools to launch the installed native executable with `--sift-recovery-only`. Sift does not automatically elevate on these platforms. macOS privacy settings may also restrict disk access.
 
-## Results, previews, and verified copies
+Android non-root scanning requires All files access for the selected shared volume. This permission does not grant raw-sector access. Rooted scanning is an explicit separate action; Sift never roots, unlocks or flashes a device. The installed helper accepts a validated storage identifier, resolves its mounted device itself, opens it read-only and implements bounded reads only. It has no source write, deletion, destination or arbitrary command API. No network permission is added.
 
-- Generated filenames contain source byte offsets. Categories group Images,
-  Documents, Archives, and Audio. Search name, format, or hexadecimal offset.
-- List / Grid views, individual selection, filtered select-all, and one-file
-  recovery are available. Details show exact offset, size, format evidence, and
-  SHA-256. In-memory image previews are lazy and bounded; non-image candidates
-  show their type. Previews never render HTML, decompress archives, or execute data.
-- Select a destination explicitly. Sift creates a new unique recovery folder
-  with category subfolders. Android declares the corresponding image/document/
-  archive/audio MIME type so providers can retain usable file extensions. It never
-  reconstructs unknown original paths.
-- Each copy is compared with the SHA-256 recorded during the scan, flushed, and
-  read back. A copy is reported successful only after verification. This verifies
-  copied bytes, not whether the recovered document is meaningful or will open.
-- Desktop uses exclusive file creation and OS non-replacing publication, including
-  Linux `RENAME_NOREPLACE`, macOS `RENAME_EXCL`, and Windows `MoveFileW`. There is
-  no replacing fallback if the filesystem rejects that operation. Android uses
-  fresh DocumentsProvider documents, non-truncating opens, empty-file/type checks,
-  and source descriptor-identity checks before writing. Failed or unverified
-  destination opens never trigger document deletion. Providers must support
-  regular local files, read-back, and flush; unsupported destinations report errors.
-- Failures are per file. Failed incomplete copies are removed when possible;
-  removal failures are reported. Stop preserves completed verified copies;
-  unprocessed selections remain selected. Source bytes are never written by the
-  recovery engine. `Close image` releases the evidence handle and result set.
-- `recovery-manifest.json` records method/schema version, source label/size,
-  requested IDs, offsets, sizes, hashes, format evidence, and outcomes. It contains
-  private source/destination information; share it deliberately. A manifest-save
-  failure is reported independently of successfully copied files.
+Active sources can change through the operating system or other apps. NTFS metadata and allocation are rechecked before and after recovery. Exported bytes are compared with destination read-back and a second source read. Signature and non-root cached candidates are SHA-256 checked against the scanned byte ranges. Stable images remain useful for forensic work but are optional.
 
-## Resource limits and implementation
+## Review and save
 
-The Rust desktop engine and Kotlin Android engine consume the same synthetic
-cross-platform golden image, expected offsets, sizes, and SHA-256 values.
-Source scans use 1 MiB blocks with signature overlap. Format probing and hashing
-are streaming; entropy/footer searches reuse bounded windows. No image-size
-buffer or temporary image copy is created. Native work stays off the UI thread.
+Results support categories, search, list/grid views, local image thumbnails, individual selection, multiple selection, all filtered matches, evidence details, progress and cancellation. Entries that cannot safely be recovered remain inspectable and cannot be selected. Original paths are evidence, never output instructions. Output filenames are sanitized and record IDs prevent collisions. Copies go into a new category-organized recovery folder with a JSON manifest recording evidence, original paths where known, hashes and per-file outcomes. Original directory trees are recorded, not recreated automatically.
 
-Limits: 512 MiB per candidate, 64 MiB per PNG chunk, 10,000 results, 50,000 header
-attempts, 100,000 format chunks, and a validation-read budget of four image lengths
-plus 512 MiB. A limit or cancellation produces explicitly partial results. This
-is a bounded preview, not a claim to examine every recoverable byte or format.
-Image preview input caps at 16 MiB and output at 384 px. Desktop bounds decoder
-allocation at 64 MiB and native preview concurrency at two; Android uses sampled
-ImageDecoder, two preview workers, and a 16 MiB bitmap LRU cache. The desktop UI
-shares the lazy bounded preview cache/queue with cleaning, under a separate
-allowlisted recovery command. No arbitrary image ranges are accepted from the UI.
+Direct Windows exports refuse the source volume, including aliases and mount points. Linux exports refuse devices in the source physical-device family. Direct macOS exports require a different external disk. Rooted Android exports require a different, identifiable local storage volume and refuse the source before creating output. Non-root phone scanning can save copies through Android's destination picker; another device is preferable.
 
-Source identity, length, and timestamps are checked around work. Selected ranges
-are hashed at scan and export to detect changed content. Windows holds the source
-with read sharing only. These measures do not turn a live, concurrently modified
-image into a forensic snapshot; use stable offline evidence. Normal path-based
-filesystem APIs cannot eliminate all races with unrelated local processes.
+Hashes verify the bytes Sift read and wrote; they cannot establish that those bytes equal a lost original whose hash is unknown. Zeroed, partly overwritten or encrypted data can be unrecoverable. No tool can guarantee complete recovery.
 
-## Validation boundaries
+## Bounded work
 
-Native tests cover exact six-format golden boundaries/hashes, source preservation,
-scan-buffer overlap, PNG corruption, oversized RIFF, changed/replaced sources,
-selection allowlists, cancellation, verified exports/manifests, bounded previews,
-JPEG search-window reuse, and no-replacement publication. Kotlin JVM tests consume
-the same image and exercise exact copies, changes, corruption, cancellation, and
-JPEG marker density. Android instrumented tests use an isolated **debug-only**
-DocumentsProvider to exercise real SAF descriptors, read-back failure, source URI
-aliases, Compose selection/layout/details, and trash navigation. Permission-free image recovery runs in a separate
-invocation with All files access already denied; revoking this permission during
-instrumentation terminates Android’s running app process. No test provider
-or sample image is included in release APKs. Interface tests verify launcher,
-state retention, native command arguments, filters, one-file export, and focus.
+NTFS: 2 million records, 10,000 deleted entries, 64 GiB per file, 128 MiB allocation bitmap, 65,536 data runs per file. Signature scanning: 10,000 candidates, 50,000 header attempts, 512 MiB per file and a bounded validation-read budget. Non-root Android: 100,000 visited entries, 1,024 cache containers, 256 MiB per container, 2 GiB of containers, 10,000 distinct candidates. Limits and cancellation produce partial reports. Bins, links, Android app-private directories and Sift recovery output directories are excluded from the non-root search.
 
-Emulators, fixtures, and browser tests do not establish physical-device recovery
-rates, OEM compatibility, full desktop GUI qualification, or competitive recovery
-benchmarks. See [validation records](../VALIDATION.md) and [product goals](../PRODUCT-GOALS.md).
+## Verification
 
-<img src="../artifacts/sift-android-recovery.png" width="320" alt="The optimized Android recovery workspace on an emulator, before choosing an image" />
+`recovery-fixtures/ntfs-deleted.img.gz` is a real, 32 MiB NTFS filesystem created with NTFS-3G. `scripts/make-ntfs-fixture.c` writes and deletes a resident text file and a fragmented binary file through NTFS-3G's filesystem APIs. Live control files remain. It is development-only GPL-licensed tooling, never linked into the MIT application. The compressed image contains synthetic data only and is excluded from release APKs.
+
+The shared Rust engine verifies original paths, exact bytes across fragmented runs, live-file exclusion, reused-cluster refusal, changed-record refusal, partition offsets, cancellation and source preservation. The native exporter additionally verifies recovered files, hashes and manifests. Windows CI creates a disposable VHD, permanently deletes known files through DeleteFile, recovers directly from that drive and checks same-volume output refusal. Android instrumentation exercises the same NTFS engine, non-root on-device cache discovery and verified SAF exports. Root-helper protocol tests exercise bounded cross-sector reads and source preservation; protocol tests are not qualification of all root managers or encrypted devices.

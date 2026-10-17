@@ -16,6 +16,11 @@ internal data class RecoveryFile(
     val size: Long,
     val evidence: String,
     val sha256: String,
+    val originalPath: String? = null,
+    val recoverable: Boolean = true,
+    val origin: String? = null,
+    val width: Int? = null,
+    val height: Int? = null,
 ) {
     val mimeType: String
         get() =
@@ -26,7 +31,12 @@ internal data class RecoveryFile(
                 "pdf" -> "application/pdf"
                 "zip" -> "application/zip"
                 "wav" -> "audio/x-wav"
-                else -> "application/octet-stream"
+                else ->
+                    runCatching {
+                            android.webkit.MimeTypeMap.getSingleton()
+                                .getMimeTypeFromExtension(format)
+                        }
+                        .getOrNull() ?: "application/octet-stream"
             }
 }
 
@@ -51,11 +61,53 @@ internal data class RecoveryProgress(
 
 internal fun ByteArray.hex() = joinToString("") { "%02x".format(it.toInt() and 255) }
 
+internal interface RecoveryReader {
+    val size: Long
+    val report: RecoveryReport
+    val cancel: AtomicBoolean
+
+    fun setCancelled(value: Boolean) {
+        cancel.set(value)
+    }
+
+    fun scan(progress: (RecoveryProgress) -> Unit): RecoveryReport
+
+    fun previewBytes(id: String): ByteArray?
+
+    fun copy(id: String, write: (ByteArray, Int) -> Unit, progress: (Long) -> Unit): String
+
+    fun close() {}
+}
+
+internal interface RecoveryChannel {
+    fun size(): Long
+
+    fun position(value: Long)
+
+    fun read(output: ByteBuffer): Int
+}
+
+internal class FileRecoveryChannel(private val file: FileChannel) : RecoveryChannel {
+    override fun size() = file.size()
+
+    override fun position(value: Long) {
+        file.position(value)
+    }
+
+    override fun read(output: ByteBuffer) = file.read(output)
+}
+
 internal class RecoveryCarver(
-    private val channel: FileChannel,
+    private val channel: RecoveryChannel,
     val source: String,
     private val unchanged: () -> Unit,
-) {
+) : RecoveryReader {
+    constructor(
+        channel: FileChannel,
+        source: String,
+        unchanged: () -> Unit,
+    ) : this(FileRecoveryChannel(channel), source, unchanged)
+
     companion object {
         const val BLOCK = 1024 * 1024
         const val MAX_FILE = 512L * 1024 * 1024
@@ -64,12 +116,12 @@ internal class RecoveryCarver(
         private val JPEG = byteArrayOf(-1, -40, -1)
     }
 
-    val cancel = AtomicBoolean(false)
+    override val cancel = AtomicBoolean(false)
     private var budget = 0L
     private var searchCache = ByteArray(0)
     private var searchStart = 0L
-    val size = channel.size()
-    var report = RecoveryReport(source, size)
+    override val size = channel.size()
+    override var report = RecoveryReport(source, size)
         private set
 
     init {
@@ -377,7 +429,7 @@ internal class RecoveryCarver(
     }
 
     @Synchronized
-    fun scan(progress: (RecoveryProgress) -> Unit): RecoveryReport {
+    override fun scan(progress: (RecoveryProgress) -> Unit): RecoveryReport {
         unchanged()
         searchCache = ByteArray(0)
         searchStart = 0
@@ -472,7 +524,7 @@ internal class RecoveryCarver(
     }
 
     @Synchronized
-    fun previewBytes(id: String): ByteArray? {
+    override fun previewBytes(id: String): ByteArray? {
         unchanged()
         val file = report.files.firstOrNull { it.id == id } ?: error("Candidate not in this scan.")
         if (file.category != "Images" || file.size > 16 * 1024 * 1024) return null
@@ -488,7 +540,11 @@ internal class RecoveryCarver(
 
     /** Writer receives only allowlisted contiguous bytes; never an arbitrary path. */
     @Synchronized
-    fun copy(id: String, write: (ByteArray, Int) -> Unit, progress: (Long) -> Unit) {
+    override fun copy(
+        id: String,
+        write: (ByteArray, Int) -> Unit,
+        progress: (Long) -> Unit,
+    ): String {
         unchanged()
         val file = report.files.firstOrNull { it.id == id } ?: error("Candidate not in this scan.")
         stopped()
@@ -508,5 +564,6 @@ internal class RecoveryCarver(
             "Source bytes differ from the recovery scan."
         }
         unchanged()
+        return file.sha256
     }
 }

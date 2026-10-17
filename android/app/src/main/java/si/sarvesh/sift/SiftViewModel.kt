@@ -16,13 +16,24 @@ data class SiftState(
     val inventory: Inventory = Inventory(), val scanned: Boolean = false, val compared: Boolean = false,
     val selected: Set<String> = emptySet(), val trashSelected: Set<String> = emptySet(), val trash: List<TrashEntry> = emptyList(),
     val result: Outcome? = null, val error: String? = null, val total: Long = 0, val available: Long = 0,
-    val needsScan: Boolean = false, val trashWarnings: Int = 0
+    val needsScan: Boolean = false, val trashWarnings: Int = 0, val storageId: String = "primary"
 )
 class SiftViewModel(application: Application) : AndroidViewModel(application) {
-    private val engine = StorageEngine(application)
+    private var engine = StorageEngine(application)
     private val mutable = MutableStateFlow(SiftState())
     val state = mutable.asStateFlow()
     init { refresh() }
+    fun selectStorage(id:String) = work("Changing storage") {
+        val app=getApplication<Application>()
+        val source=storageSources(app).firstOrNull {it.id==id} ?: error("That storage device is no longer mounted.")
+        engine.cancel.set(true)
+        engine=if(id=="primary") StorageEngine(app) else {
+            val ownFolder=app.getExternalFilesDirs(null).filterNotNull().firstOrNull {it.canonicalFile.toPath().startsWith(source.root.toPath())} ?: error("Android did not provide an app-owned trash folder on this device.")
+            StorageEngine(app,source.root,java.io.File(ownFolder,"SiftTrash"),java.io.File(app.filesDir,"trash-index-${id.filter {it.isLetterOrDigit() || it=='-'}}"))
+        }
+        mutable.value=SiftState(access=Environment.isExternalStorageManager(),busy=true,storageId=id)
+        updateStorage()
+    }
     fun refresh() {
         mutable.update { it.copy(access = Environment.isExternalStorageManager()) }
         if (!mutable.value.busy) work("Reading storage") { updateStorage() }

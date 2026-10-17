@@ -3,6 +3,25 @@ set -euo pipefail
 mkdir -p android-device-results
 adb install -r test-apks/debug/app-debug.apk
 adb install -r -t test-apks/androidTest/debug/app-debug-androidTest.apk
+# Qualify the installed root helper's read-only geometry handshake on the disposable
+# userdebug emulator, before any instrumentation. The app itself stays unprivileged.
+adb root > android-device-results/root-helper-access.txt 2>&1 || true
+adb wait-for-device
+if [ "$(adb shell id -u | tr -d '\r')" = 0 ]; then
+  native_dir=$(adb shell dumpsys package si.sarvesh.sift | sed -n 's/^[[:space:]]*nativeLibraryDir=//p' | tr -d '\r' | head -1)
+  adb shell -T "'$native_dir/libsift_root_reader.so' --storage-id primary" </dev/null > android-device-results/root-helper-header.bin 2> android-device-results/root-helper-error.txt
+  python3 - <<'PY'
+from pathlib import Path
+import struct
+header=Path('android-device-results/root-helper-header.bin').read_bytes()
+assert len(header)==24 and header[:8]==b'SIFTRD01', 'Root helper handshake failed'
+size, device=struct.unpack('>QQ',header[8:])
+assert size >= 4096 and device > 0
+print('Installed read-only helper opened disposable userdata; valid geometry; no scan/write requests.')
+PY
+fi
+adb unroot > /dev/null 2>&1 || true
+adb wait-for-device
 # Verify the real first-launch permission screen before granting anything.
 adb shell appops set si.sarvesh.sift MANAGE_EXTERNAL_STORAGE deny
 adb shell am start -n si.sarvesh.sift/.MainActivity

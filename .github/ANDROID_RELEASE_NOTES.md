@@ -1,3 +1,15 @@
+# Sift Android 0.4.0 — on-device recovery preview
+
+Clean and Recover now include a storage selector for mounted internal shared storage and memory cards/USB volumes exposed by Android. Cleaning keeps each volume's trash/index separate. Install over the existing APK; uninstalling removes Sift trash.
+
+**Non-root:** scan the selected storage's accessible cache, hidden and .nomedia folders for surviving/embedded JPEG, PNG, WebP, PDF, ZIP and WAV contents. Review previews, dimensions and source evidence; recover individual/multiple/all matches as verified copies. Some results are thumbnails or copies of existing files. Original deletion status is unknown; this is not raw deleted-sector access.
+
+**Rooted (experimental):** explicitly request root to read the selected mounted internal or supported removable block device through a read-only helper. Deep signature candidates have unknown deletion status. Encryption, TRIM and overwrites may prevent recovery even with root. Save to another identifiable local storage volume; the source is refused before creating output. Sift does not root, unlock or flash devices. No network permission is added.
+
+Advanced NTFS/image tools remain separate. See [capabilities and limits](https://github.com/sarvesh-kr/sift/blob/main/docs/RECOVERY.md). Same signing identity as previous APKs, Android 11+, universal ARM/Intel APK, 16 KiB native alignment. Root-manager compatibility is experimental, not universally qualified.
+
+---
+
 **0.3.0: Clean data / Recover data workspaces.** Start with storage cleanup or
 recovery. Recover data opens Sift trash or uses Android's document picker to scan
 a local, seekable raw disk image without All files access. Contiguous JPEG, PNG,

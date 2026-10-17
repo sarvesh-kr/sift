@@ -1,0 +1,31 @@
+[package]
+name = "sift-undelete"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Read-only NTFS deleted-file metadata and stream recovery"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+ntfs = "0.4.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+jni = { version = "0.21", optional = true }
+
+[features]
+android-jni = ["dep:jni"]
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+flate2 = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

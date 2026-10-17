@@ -38,6 +38,8 @@ type RecoveryFile = {
   size: number;
   evidence: string;
   sha256: string;
+  originalPath?: string | null;
+  recoverable?: boolean;
 };
 type RecoveryReport = {
   source: string;
@@ -121,8 +123,8 @@ export function ModeHome({
           <span className="eyebrow">A SECOND LOOK</span>
           <h2>Recover data</h2>
           <p>
-            Start with trash, or search a disk image for recognizable file
-            contents. Review the evidence. Save a copy.
+            Find permanently deleted NTFS files, review their original paths,
+            and recover remaining contents to another drive.
           </p>
           <span className="mode-enter">
             Open recovery workspace <ArrowRight size={19} />
@@ -213,6 +215,25 @@ export function RecoveryWorkspace({
   active: boolean;
   onHome: () => void;
 }) {
+  const [capabilities, setCapabilities] = useState<{
+    driveAccess: boolean;
+    canElevate?: boolean;
+    recoveryOnly: boolean;
+    drives: { id: string; label: string; filesystem?: string }[];
+  }>({ driveAccess: false, recoveryOnly: false, drives: [] });
+  const [drive, setDrive] = useState("");
+  const [deep, setDeep] = useState(false);
+  useEffect(() => {
+    if (native)
+      void invoke<typeof capabilities>("recovery_capabilities")
+        .then((value) => {
+          if (value) {
+            setCapabilities(value);
+            setDrive(value.drives[0]?.id || "");
+          }
+        })
+        .catch(() => {});
+  }, []);
   const [report, setReport] = useState<RecoveryReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -256,7 +277,7 @@ export function RecoveryWorkspace({
       report?.files.filter(
         (file) =>
           (category === "All" || file.category === category) &&
-          `${file.name} ${file.format} ${file.offset.toString(16)}`
+          `${file.name} ${file.originalPath || ""} ${file.format} ${file.offset.toString(16)}`
             .toLowerCase()
             .includes(query.toLowerCase()),
       ) || [],
@@ -273,7 +294,7 @@ export function RecoveryWorkspace({
       return next;
     });
   }
-  async function scan() {
+  async function scan(driveId?: string) {
     if (!native) {
       setHelp(true);
       return;
@@ -283,7 +304,10 @@ export function RecoveryWorkspace({
     setNotice("");
     setResult(null);
     try {
-      const next = await invoke<RecoveryReport | null>("scan_recovery_image");
+      const next = await invoke<RecoveryReport | null>(
+        driveId ? "scan_recovery_drive" : "scan_recovery_image",
+        driveId ? { id: driveId, deep } : undefined,
+      );
       if (next) {
         setReport(next);
         setSelected(new Set());
@@ -339,17 +363,6 @@ export function RecoveryWorkspace({
       setProgress(null);
     }
   }
-  async function trash() {
-    if (!native) {
-      setHelp(true);
-      return;
-    }
-    try {
-      await invoke("open_system_trash");
-    } catch (error) {
-      setNotice(String(error));
-    }
-  }
   return (
     <PreviewProvider
       enabled={native && active && !busy}
@@ -398,29 +411,105 @@ export function RecoveryWorkspace({
           </div>
           <div className="recovery-paths">
             <section className="recovery-path">
-              <span className="recovery-step">01 / START HERE</span>
-              <History size={24} />
-              <h2>Still in the trash?</h2>
+              <span className="recovery-step">
+                01 / DELETED FILES ON A DRIVE
+              </span>
+              <HardDrive size={24} />
+              <h2>Recover from your storage.</h2>
               <p>
-                Recycle Bin / system trash keeps original file names and
-                locations. Restore these through your system file manager.
+                Read deleted filesystem records, including original filenames,
+                folder paths, resident contents and fragmented data runs. Live
+                files are excluded in NTFS record mode. Deep signature scanning
+                supports six contiguous formats on other filesystems, with
+                unknown deletion status.
               </p>
-              <button
-                className="button secondary"
-                onClick={() => void trash()}
-                disabled={busy}
-              >
-                Open system trash
-                <ArrowRight size={15} />
-              </button>
+              {capabilities.driveAccess ? (
+                <>
+                  <label className="recovery-category">
+                    Source drive{" "}
+                    <select
+                      aria-label="Recovery source drive"
+                      value={drive}
+                      onChange={(event) => {
+                        setDrive(event.target.value);
+                        const fs = capabilities.drives.find(
+                          (d) => d.id === event.target.value,
+                        )?.filesystem;
+                        setDeep(
+                          fs ? !fs.toLowerCase().includes("ntfs") : false,
+                        );
+                      }}
+                      disabled={busy}
+                    >
+                      {capabilities.drives.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="recovery-category">
+                    Scan method{" "}
+                    <select
+                      aria-label="Recovery scan method"
+                      value={deep ? "deep" : "ntfs"}
+                      disabled={busy}
+                      onChange={(e) => setDeep(e.target.value === "deep")}
+                    >
+                      <option value="ntfs">
+                        Deleted NTFS records · original names and paths
+                      </option>
+                      <option value="deep">
+                        Deep signatures · any readable device · unknown deletion
+                        status
+                      </option>
+                    </select>
+                  </label>
+                  <button
+                    className="button primary"
+                    onClick={() => void scan(drive)}
+                    disabled={busy || !drive}
+                  >
+                    {deep ? "Deep scan storage" : "Scan deleted files"}{" "}
+                    <FileSearch size={15} />
+                  </button>
+                  {capabilities.canElevate && !capabilities.recoveryOnly && (
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        void invoke("enable_recovery_drive_access").catch((e) =>
+                          setNotice(String(e)),
+                        )
+                      }
+                    >
+                      Enable drive access (Windows administrator)
+                    </button>
+                  )}
+                  <small>
+                    {capabilities.canElevate
+                      ? "Administrator consent opens a recovery-only window. Cleanup is disabled there."
+                      : "Raw devices require OS disk-read permissions. If access is denied, launch the native app with your administrator tools and --sift-recovery-only."}{" "}
+                    Save copies to another device.
+                  </small>
+                </>
+              ) : (
+                <p>
+                  The native app lists local drives and connected devices.
+                  Browsers cannot read deleted drive sectors.
+                </p>
+              )}
             </section>
             <section className="recovery-path image-path">
-              <span className="recovery-step">02 / SEARCH AN IMAGE</span>
+              <span className="recovery-step">
+                ADVANCED / WORK FROM AN IMAGE
+              </span>
               <Database size={24} />
-              <h2>Look for file contents.</h2>
+              <h2>Scan NTFS filesystem records.</h2>
               <p>
-                Scan a local raw disk image (.img, .dd, .raw). Search for
-                contiguous JPEG, PNG, WebP, PDF, ZIP, and WAV files.
+                Choose a local raw NTFS volume or disk image (.img, .dd, .raw).
+                Recover deleted files of any type when their records and data
+                runs survive.
               </p>
               <button
                 className="button primary"
@@ -442,7 +531,9 @@ export function RecoveryWorkspace({
               <strong>Recovery starts with preserving what’s left.</strong> Stop
               writing to the affected drive. Work from an image made with a
               disk-imaging tool and save recovered files to another physical
-              drive. Sift does not create disk images or access live raw disks.
+              drive. Sift opens sources read-only. An active drive can still
+              change through Windows or other apps; a stable image is safer.
+              Sift does not create disk images.
             </p>
           </div>
           {busy && (
@@ -500,7 +591,7 @@ export function RecoveryWorkspace({
                 <p className="recovery-path-text">{result.directory}</p>
                 <p>
                   {result.manifest
-                    ? "recovery-manifest.json records offsets, format evidence, and SHA-256 hashes."
+                    ? "recovery-manifest.json records original paths, deleted-record evidence, outcomes, and SHA-256 hashes."
                     : "No manifest saved."}
                 </p>
                 {result.warning && <p role="alert">{result.warning}</p>}
@@ -556,21 +647,20 @@ export function RecoveryWorkspace({
               <div className="recovery-facts">
                 <span>
                   <HardDrive size={15} />
-                  {bytes(report.scannedBytes)} / {bytes(report.sourceBytes)}{" "}
-                  scanned
+                  {report.method === "ntfs-deleted-records-v1"
+                    ? `${report.scannedBytes.toLocaleString()} file records examined`
+                    : `${bytes(report.scannedBytes)} / ${bytes(report.sourceBytes)} scanned`}
                 </span>
                 <span>{(report.elapsedMs / 1000).toFixed(1)}s</span>
                 <span>
-                  {report.rejectedHeaders.toLocaleString()} incomplete or
-                  unrecognized headers excluded
+                  {report.rejectedHeaders.toLocaleString()} unreadable or unused
+                  records skipped
                 </span>
               </div>
               <p className="recovery-evidence-note">
-                These are byte ranges, not a list of proven deleted files.
-                Existing files may appear too. Names are generated from offsets;
-                original names and folders are unknown. Format checks do not
-                guarantee readable contents. PDF results stop at the first
-                footer; later revisions may be missing.
+                {report.method === "ntfs-deleted-records-v1"
+                  ? "These entries are marked deleted in NTFS. Original paths come from surviving metadata. Reused data clusters are blocked. Even unallocated bytes may be overwritten, zeroed by TRIM, or unreadable; recoverability is not a guarantee of intact contents."
+                  : "Signature search: deleted status and original paths are unknown."}
               </p>
               {(report.cancelled || report.limited) && (
                 <p className="recovery-evidence-note">
@@ -584,7 +674,7 @@ export function RecoveryWorkspace({
                   <Search size={17} />
                   <input
                     aria-label="Search recovery results"
-                    placeholder="Name, format, or hex offset"
+                    placeholder="Original name, folder, format, or record offset"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
@@ -620,7 +710,9 @@ export function RecoveryWorkspace({
                       (current) =>
                         new Set([
                           ...current,
-                          ...visible.map((file) => file.id),
+                          ...visible
+                            .filter((file) => file.recoverable !== false)
+                            .map((file) => file.id),
                         ]),
                     )
                   }
@@ -653,7 +745,7 @@ export function RecoveryWorkspace({
                       type="checkbox"
                       aria-label={`Select ${file.name}`}
                       checked={selected.has(file.id)}
-                      disabled={busy}
+                      disabled={busy || file.recoverable === false}
                       onChange={() => toggle(file.id)}
                     />
                     <button
@@ -671,7 +763,13 @@ export function RecoveryWorkspace({
                           {file.category} · {bytes(file.size)} · offset 0x
                           {file.offset.toString(16)}
                         </small>
-                        <em>{file.evidence}</em>
+                        <em>{file.originalPath || file.evidence}</em>
+                        {file.originalPath && (
+                          <em>
+                            {file.recoverable === false ? "Unavailable: " : ""}
+                            {file.evidence}
+                          </em>
+                        )}
                       </span>
                     </button>
                   </article>
@@ -683,11 +781,11 @@ export function RecoveryWorkspace({
                   <h3>
                     {report.files.length
                       ? "No matching candidates."
-                      : "No supported file boundaries found."}
+                      : "No deleted NTFS entries found."}
                   </h3>
                   <p>
                     This does not prove the image contains no recoverable data.
-                    Fragmentation, encryption, unsupported formats, and scan
+                    Overwriting, encryption, unsupported NTFS features, and scan
                     limits affect these results.
                   </p>
                 </div>
@@ -714,9 +812,7 @@ export function RecoveryWorkspace({
           )}
           <footer className="recovery-footer">
             <ShieldCheck size={16} />
-            <span>
-              Contiguous carving preview · no upload · no source writes
-            </span>
+            <span>Device recovery · no upload · no source writes</span>
             <button className="text-button" onClick={() => setHelp(true)}>
               Capabilities & limits
               <ArrowRight size={14} />
@@ -738,14 +834,21 @@ export function RecoveryWorkspace({
               <dd>{details.evidence}</dd>
               <dt>SHA-256</dt>
               <dd>
-                <code>{details.sha256}</code>
+                <code>
+                  {details.sha256 ||
+                    "Calculated and verified when recovering a copy"}
+                </code>
               </dd>
               <dt>Original path / deletion status</dt>
-              <dd>Unknown. Generated name; contiguous bytes only.</dd>
+              <dd>
+                {details.originalPath
+                  ? `${details.originalPath} · marked deleted in NTFS`
+                  : "Unknown. Signature search only."}
+              </dd>
             </dl>
             <button
               className="button primary full-width"
-              disabled={busy}
+              disabled={busy || details.recoverable === false}
               onClick={() => {
                 setReview([details.id]);
                 setDetails(null);
@@ -769,13 +872,13 @@ export function RecoveryWorkspace({
             </p>
             <p>
               Choose another physical drive when recovering from an affected
-              disk. The source image stays read-only. Copied bytes are SHA-256
-              checked against the scan and read back from the destination.
+              disk. The source stays read-only. Copies are SHA-256 checked
+              against a second source read and read back from the destination.
             </p>
             <p>
-              Generated names and format evidence appear in a JSON manifest. No
-              guarantee is made that a candidate was deleted or will open
-              correctly.
+              Original paths and deleted-record evidence appear in a JSON
+              manifest. Output names include a record ID to prevent collisions.
+              Files may still be incomplete or unreadable.
             </p>
             {notice && (
               <p className="recovery-error" role="alert">
@@ -826,17 +929,19 @@ export function RecoveryWorkspace({
         {help && (
           <Dialog title="What recovery can do." onClose={() => setHelp(false)}>
             <p>
-              System trash can restore files that remain there, using the
-              operating system’s controls. The separate image scan searches
-              regular, local raw disk-image files for contiguous JPEG, PNG,
-              WebP, PDF, ZIP, and WAV byte ranges.
+              The NTFS undelete scanner reads deleted master-file-table records.
+              It can recover resident data and follow fragmented or sparse runs,
+              with original names and surviving directory paths. No bin is used
+              for recovery.
             </p>
             <p>
-              This release does not parse NTFS, FAT, exFAT, APFS, or ext
-              metadata, rebuild fragmented files, recover original names or
-              folders, decrypt data, or create images. ZIP64, split archives,
-              incomplete files, and files above 512 MiB are unsupported. Source
-              images must remain stable.
+              Direct NTFS drive access is available on Windows with
+              administrator consent. NTFS images work on Windows, Linux and
+              macOS. Files referencing reused clusters are blocked. Compressed
+              or EFS-encrypted files, file/MFT extension records, FAT/exFAT,
+              APFS, ext and locked BitLocker are unsupported. Limits are 10,000
+              entries, 2 million records and 64 GiB per file. Paths with missing
+              parent records are marked unknown.
             </p>
             <p>
               SSD TRIM, overwriting, encryption, and physical failure may make

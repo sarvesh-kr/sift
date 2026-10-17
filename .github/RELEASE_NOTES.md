@@ -1,3 +1,11 @@
+# Sift 0.6.0 — device recovery preview
+
+Recovery now starts with selecting a local drive or connected storage device. NTFS mode reads deleted filesystem records, retains original names and surviving folder paths, follows resident/fragmented/sparse contents and blocks reused clusters. A separate deep scan searches six contiguous file formats on readable devices and labels deletion status as unknown. Windows can open a UAC-authorized recovery-only window; cleanup is disabled in that process. Existing cleaner, previews, selection and reviewed cleanup remain available in the normal app.
+
+Exports create new categorized copies, sanitize names, retain original paths in the manifest, verify hashes and destination read-back, and reject source-device destinations. Disk-image tools remain optional. See [recovery capabilities and limits](https://github.com/sarvesh-kr/sift/blob/main/docs/RECOVERY.md). Raw-device permissions, encryption, TRIM and overwrites can prevent recovery. This is a preview, not a guarantee of professional-tool parity. Installers remain unsigned/not notarized.
+
+---
+
 **0.5.0: Clean data / Recover data workspaces.** A new start screen keeps the
 existing storage explorer and cleanup tools under Clean data. Recover data opens
 system trash or scans a local, regular raw disk image for contiguous JPEG, PNG,

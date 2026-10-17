@@ -2,10 +2,10 @@ name: Android builds
 on:
   push:
     branches: [main]
-    paths: ['android/**', 'recovery-fixtures/**', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
+    paths: ['android/**', 'recovery-engine/**', 'recovery-fixtures/**', 'scripts/build-android-recovery.py', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
     tags: ['android-v*']
   pull_request:
-    paths: ['android/**', 'recovery-fixtures/**', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
+    paths: ['android/**', 'recovery-engine/**', 'recovery-fixtures/**', 'scripts/build-android-recovery.py', 'scripts/package-android.py', 'scripts/test-android-device.sh', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -27,9 +27,15 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: recovery-engine -> target
       - uses: gradle/actions/setup-gradle@v4
       - name: Install pinned Android SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'ndk;28.2.13676358'
       - name: Restore optional private release signer
         env:
           KEYSTORE: ${{ secrets.SIFT_ANDROID_KEYSTORE_BASE64 }}

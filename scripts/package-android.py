@@ -19,7 +19,11 @@ signed = (source/'app-release.apk').is_file()
 apk = source/('app-release.apk' if signed else 'app-release-unsigned.apk')
 if not apk.is_file(): raise SystemExit('Android APK missing')
 with zipfile.ZipFile(apk) as archive:
-    if any(name in archive.namelist() for name in ['assets/sample.img','assets/expected.json','assets/expected.tsv']):
+    for abi in ['arm64-v8a','armeabi-v7a','x86_64','x86']:
+        for library in ['libsift_undelete.so','libsift_root_reader.so']:
+            if f'lib/{abi}/{library}' not in archive.namelist():
+                raise SystemExit(f'Missing shared recovery engine/helper for {abi}: {library}')
+    if any(name in archive.namelist() for name in ['assets/sample.img','assets/expected.json','assets/expected.tsv','assets/ntfs-deleted.img.gz','assets/ntfs-deleted.img']):
         raise SystemExit('Debug recovery fixtures must never ship in a release APK')
 output = root/'dist-android'; output.mkdir(exist_ok=True)
 name = f'Sift-{version}-android'+('' if signed else '-unsigned')+'.apk'

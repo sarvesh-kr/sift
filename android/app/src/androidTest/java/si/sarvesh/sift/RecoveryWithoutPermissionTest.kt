@@ -28,7 +28,10 @@ class RecoveryWithoutPermissionTest {
         var model: RecoveryViewModel? = null
         compose.runOnIdle {
             model = ViewModelProvider(compose.activity)[RecoveryViewModel::class.java]
-            model!!.scan(DocumentsContract.buildDocumentUri(authority, "sample.img"))
+            model!!.scan(
+                DocumentsContract.buildDocumentUri(authority, "sample.img"),
+                carving = true,
+            )
         }
         compose.waitUntil(15_000) { !model!!.state.value.busy }
         assertNull(model!!.state.value.error)

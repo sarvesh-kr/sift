@@ -1,11 +1,12 @@
 [package]
 name = "sift-core"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 description = "Local storage analysis, reviewed cleanup, and read-only disk-image carving for Sift"
 license = "MIT"
 
 [dependencies]
+sift-undelete = { path = "../recovery-engine" }
 base64 = "0.22"
 jpeg-decoder = { version = "0.3", default-features = false }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp", "ico"] }
@@ -26,6 +27,9 @@ trash = "5.2"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+plist = "1"
+
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Com", "Win32_UI_Shell", "Win32_Storage_FileSystem"] }
 windows-core = "0.62"
@@ -35,3 +39,4 @@ trash = "5.2"
 
 [dev-dependencies]
 tempfile = "3"
+flate2 = "1"

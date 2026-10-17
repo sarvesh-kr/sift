@@ -143,6 +143,7 @@ class MainActivity : ComponentActivity() {
             if (!state.access) fullRow { AccessCard(requestStorage, state.busy) }
             if (tab==0) {
                 fullRow { Column(Modifier.padding(top=12.dp,bottom=8.dp)) { Label("SPACE, THOUGHTFULLY RECLAIMED"); Spacer(Modifier.height(14.dp)); Text("Your phone,\na little lighter.",fontSize=36.sp,lineHeight=42.sp,letterSpacing=(-1.4).sp,fontWeight=FontWeight.SemiBold); Spacer(Modifier.height(12.dp)); Note("Understand what fills your shared storage. Keep what matters; review the rest.") } }
+                fullRow { StorageSourcePicker(androidx.compose.ui.platform.LocalContext.current,state.storageId,!state.busy,model::selectStorage) }
                 fullRow { StorageCard(state) }
                 fullRow { Button(onClick=model::scan, enabled=state.access&&!state.busy,modifier=Modifier.fillMaxWidth().height(54.dp),shape=RoundedCornerShape(14.dp)) { Icon(Icons.Default.Refresh,null); Spacer(Modifier.width(9.dp)); Text(if(state.scanned) "Scan again" else "Scan shared storage") } }
                 if (state.scanned) {

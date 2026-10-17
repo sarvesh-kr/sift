@@ -57,9 +57,7 @@ internal fun SiftRoot(
     var mode by rememberSaveable { mutableStateOf("home") }
     val recoveryState by recovery.state.collectAsStateWithLifecycle()
     val holder = rememberSaveableStateHolder()
-    BackHandler(mode != "home") {
-        if (!state.busy && !recoveryState.busy) mode = if (mode == "trash") "recover" else "home"
-    }
+    BackHandler(mode != "home") { if (!state.busy && !recoveryState.busy) mode = "home" }
     when (mode) {
         "clean" ->
             holder.SaveableStateProvider("clean") {
@@ -76,18 +74,7 @@ internal fun SiftRoot(
                     recoveryState,
                     recovery,
                     onHome = { if (!recoveryState.busy) mode = "home" },
-                    onTrash = { if (!recoveryState.busy) mode = "trash" },
-                )
-            }
-        "trash" ->
-            holder.SaveableStateProvider("trash") {
-                SiftScreen(
-                    state,
-                    model,
-                    requestStorage,
-                    initialTab = 2,
-                    recoveryTrash = true,
-                    onHome = { if (!state.busy) mode = "recover" },
+                    requestStorage = requestStorage,
                 )
             }
         else -> ModeHomePhone(onSelect = { mode = it })
@@ -137,7 +124,7 @@ private fun ModeHomePhone(onSelect: (String) -> Unit) {
         }
         ModeCard(
             "Recover data",
-            "Restore from Sift trash, or search a disk image for recognizable file contents.",
+            "Find surviving hidden copies, cached photos, and embedded files on this phone. Review previews and recover what remains.",
             true,
         ) {
             onSelect("recover")
@@ -198,7 +185,7 @@ internal fun RecoveryScreen(
     state: RecoveryState,
     model: RecoveryViewModel,
     onHome: () -> Unit,
-    onTrash: () -> Unit,
+    requestStorage: () -> Unit,
 ) {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("sift-ui", Context.MODE_PRIVATE) }
@@ -207,8 +194,11 @@ internal fun RecoveryScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("All") }
     var help by remember { mutableStateOf(false) }
+    var rootReview by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf<RecoveryFile?>(null) }
     var review by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    var advanced by rememberSaveable { mutableStateOf(false) }
+    var carving by rememberSaveable { mutableStateOf(false) }
     val imagePicker =
         rememberLauncherForActivityResult(LocalImagePicker()) { uri ->
             if (uri != null) {
@@ -218,7 +208,7 @@ internal fun RecoveryScreen(
                         Intent.FLAG_GRANT_READ_URI_PERMISSION,
                     )
                 }
-                model.scan(uri)
+                model.scan(uri, carving)
             }
         }
     val destinationPicker =
@@ -237,7 +227,8 @@ internal fun RecoveryScreen(
         remember(state.report, query, category) {
             state.report?.files?.filter {
                 (category == "All" || it.category == category) &&
-                    ("${it.name} ${it.format} ${it.offset.toString(16)}".contains(query, true))
+                    ("${it.name} ${it.originalPath.orEmpty()} ${it.origin.orEmpty()} ${it.format} ${it.offset.toString(16)}"
+                        .contains(query, true))
             } ?: emptyList()
         }
     Scaffold(
@@ -326,29 +317,65 @@ internal fun RecoveryScreen(
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 RecoveryPanel(
-                    "01 / STILL IN SIFT TRASH?",
-                    "Keep original names and paths.",
-                    "Restore files previously moved to Sift trash. Gallery / Photos trash is separate; open that app to restore its files.",
+                    "RECOVERY ON THIS PHONE",
+                    "Look for what remains on your phone.",
+                    "Search accessible shared cache, hidden and .nomedia folders for surviving files and embedded photos. Preview results and see their dimensions and source evidence. A thumbnail may be smaller than your original photo. No bin or disk image is required.",
                 ) {
-                    OutlinedButton(onClick = onTrash, enabled = !state.busy) {
-                        Text("Open Sift trash")
-                    }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                RecoveryPanel(
-                    "02 / SEARCH AN IMAGE",
-                    "Look for file contents.",
-                    "Choose a local raw image (.img, .dd, .raw). Supported contiguous files: JPEG, PNG, WebP, PDF, ZIP, WAV. No All files access is required for this scan.",
-                ) {
+                    StorageSourcePicker(context, state.storageId, !state.busy, model::selectStorage)
                     Button(
-                        onClick = { imagePicker.launch(arrayOf("*/*")) },
+                        onClick = {
+                            if (android.os.Environment.isExternalStorageManager()) model.scanPhone()
+                            else requestStorage()
+                        },
                         enabled = !state.busy,
                     ) {
                         Icon(Icons.Default.Search, null)
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (state.report == null) "Choose disk image" else "Scan another image"
+                        Text("Scan this phone")
+                    }
+                    RecoveryNote(
+                        "This searches surviving copies; original deletion status is unknown. It does not read deleted internal-storage sectors or other apps’ private data. Windows provides a separate direct NTFS undelete scan with administrator consent."
+                    )
+                    TextButton(onClick = { rootReview = true }, enabled = !state.busy) {
+                        Text("Rooted deep scan · experimental")
+                    }
+                    TextButton(onClick = { advanced = !advanced }, enabled = !state.busy) {
+                        Text(if (advanced) "Hide advanced image tools" else "Advanced image tools")
+                    }
+                }
+            }
+            if (advanced) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    RecoveryPanel(
+                        "ADVANCED / NTFS IMAGE RECOVERY",
+                        "Find deleted files and original paths.",
+                        "Choose an NTFS volume or disk image (.img, .dd, .raw). Read deleted filesystem records, original filenames and folder paths; reconstruct surviving resident and fragmented contents. No All files access is required.",
+                    ) {
+                        Button(
+                            onClick = {
+                                carving = false
+                                imagePicker.launch(arrayOf("*/*"))
+                            },
+                            enabled = !state.busy,
+                        ) {
+                            Icon(Icons.Default.Search, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (state.report == null) "Choose disk image"
+                                else "Scan another image"
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                carving = true
+                                imagePicker.launch(arrayOf("*/*"))
+                            },
+                            enabled = !state.busy,
+                        ) {
+                            Text("Advanced: search file signatures")
+                        }
+                        RecoveryNote(
+                            "Signature search is separate: six contiguous formats, generated names, unknown deletion status. It can include existing files."
                         )
                     }
                 }
@@ -418,10 +445,13 @@ internal fun RecoveryScreen(
                         )
                         RecoveryNote(report.source)
                         TextButton(onClick = model::closeImage, enabled = !state.busy) {
-                            Text("Close image")
+                            Text("Close scan")
                         }
                         RecoveryNote(
-                            "${sizeLabel(report.scannedBytes)} / ${sizeLabel(report.sourceBytes)} scanned · ${report.elapsedMs/1000.0}s · ${report.rejectedHeaders} incomplete or unrecognized headers excluded"
+                            if (report.method == "ntfs-deleted-records-v1")
+                                "${report.scannedBytes} file records examined · ${report.elapsedMs/1000.0}s · ${report.rejectedHeaders} unreadable/unused records skipped"
+                            else
+                                "${sizeLabel(report.scannedBytes)} / ${sizeLabel(report.sourceBytes)} scanned · ${report.elapsedMs/1000.0}s · ${report.rejectedHeaders} skipped sources/headers"
                         )
                         if (report.cancelled || report.limited)
                             Text(
@@ -430,7 +460,14 @@ internal fun RecoveryScreen(
                                 color = RecoveryGreen,
                             )
                         RecoveryNote(
-                            "These byte ranges may include existing files. Deleted status and original names / folders are unknown. Names are generated from offsets. Format checks do not guarantee readable contents. PDF results stop at the first footer; later revisions may be missing."
+                            if (report.method == "android-root-signature-scan-v1")
+                                "Rooted raw-storage signature scan. Existing files may appear. Deleted status and original paths are unknown; encryption and TRIM may prevent recovery."
+                            else if (report.method == "android-surviving-copies-v1")
+                                "Surviving contents found in accessible shared cache and hidden folders. Original deletion status is unknown; some may be thumbnails or copies of files you still have. No bin was scanned."
+                            else if (report.method == "ntfs-deleted-records-v1")
+                                "Entries are marked deleted in NTFS. Original paths come from surviving records. Reused clusters are blocked; unallocated bytes can still be overwritten or TRIMmed. Contents are not guaranteed intact."
+                            else
+                                "Signature search: deleted status and original paths are unknown. Existing files may appear. Format checks do not guarantee readable contents."
                         )
                     }
                 }
@@ -456,7 +493,12 @@ internal fun RecoveryScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton(
-                                onClick = { model.select(state.selected + visible.map { it.id }) },
+                                onClick = {
+                                    model.select(
+                                        state.selected +
+                                            visible.filter { it.recoverable }.map { it.id }
+                                    )
+                                },
                                 enabled = !state.busy && visible.isNotEmpty(),
                             ) {
                                 Text("Select all matches")
@@ -503,7 +545,7 @@ internal fun RecoveryScreen(
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         RecoveryNote(
                             if (report.files.isEmpty())
-                                "No supported boundaries found. This does not prove that no data is recoverable; unsupported formats, fragmentation, encryption, and scan limits affect results."
+                                "No matching deleted entries found. This does not prove that no data is recoverable; overwritten records, unsupported filesystem features, encryption, and limits affect results."
                             else "No candidates match this view."
                         )
                     }
@@ -530,8 +572,18 @@ internal fun RecoveryScreen(
                         "${file.category} · ${sizeLabel(file.size)}\nOffset ${file.offset} bytes / 0x${file.offset.toString(16)}"
                     )
                     Text(file.evidence, fontSize = 12.sp)
-                    RecoveryNote("SHA-256\n${file.sha256}")
-                    RecoveryNote("Original path and deletion status: unknown.")
+                    RecoveryNote(
+                        "SHA-256\n${file.sha256.ifEmpty { "Calculated and verified when recovering" }}"
+                    )
+                    file.origin?.let { RecoveryNote("Found in: $it") }
+                    if (file.width != null && file.height != null)
+                        RecoveryNote("${file.width} × ${file.height} pixels")
+                    RecoveryNote(
+                        file.originalPath?.let { "$it · marked deleted in NTFS" }
+                            ?: if (file.origin != null)
+                                "Surviving cached contents; original deletion status unknown."
+                            else "Original path and deletion status: unknown (signature search)."
+                    )
                 }
             },
             confirmButton = {
@@ -562,7 +614,7 @@ internal fun RecoveryScreen(
                         "Choose a destination on another physical drive when recovering from an affected disk. Sift creates a new recovery folder, groups files by category, compares SHA-256 hashes, and reads copies back. Existing files are never intentionally replaced. The source stays read-only."
                     )
                     RecoveryNote(
-                        "Names are generated from offsets. No guarantee is made that a candidate was deleted or will open correctly. A JSON manifest records evidence and outcomes."
+                        "A JSON manifest records original paths, deleted-record evidence, hashes and outcomes. Output names include a record ID to prevent collisions. Readable or complete contents cannot be guaranteed."
                     )
                 }
             },
@@ -578,6 +630,29 @@ internal fun RecoveryScreen(
             },
         )
     }
+    if (rootReview)
+        AlertDialog(
+            onDismissRequest = { rootReview = false },
+            title = { Text("Read-only rooted storage scan") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    RecoveryNote(
+                        "This requires an already rooted phone and your root manager’s consent. Sift does not root or unlock your device. A small helper reads the selected mounted storage device (internal userdata or a supported removable card); it has no source write or delete command. Mounted ext4, F2FS, FAT, exFAT and NTFS devices may be accessed when your root manager permits it.\n\nIt searches six contiguous formats (JPEG, PNG, WebP, PDF, ZIP, WAV). Existing files may appear; original names, folders and deletion status are unknown. Per-file encryption, TRIM and overwrites may leave no recoverable contents even with root. Files above 512 MiB are unsupported.\n\nSave recovered files to a different storage device. Same-device destinations are refused before creating output."
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        rootReview = false
+                        model.scanRootedPhone()
+                    }
+                ) {
+                    Text("Request root & scan read-only")
+                }
+            },
+            dismissButton = { TextButton(onClick = { rootReview = false }) { Text("Cancel") } },
+        )
     if (help)
         AlertDialog(
             onDismissRequest = { help = false },
@@ -585,7 +660,7 @@ internal fun RecoveryScreen(
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     RecoveryNote(
-                        "Restore files retained in Sift trash. Gallery / Photos trash is managed in those apps. Image scanning finds contiguous JPEG, PNG, WebP, PDF, ZIP, and WAV bytes in a local, user-picked image. It does not scan raw phone sectors.\n\nNo NTFS, FAT, exFAT, APFS, or ext metadata parsing; no original names, folder reconstruction, fragmented-file reassembly, decryption, or image creation. Incomplete files, ZIP64, split archives, and files above 512 MiB are unsupported. ZIP payload CRCs and PDF contents are not verified.\n\nLimits: 10,000 results, 50,000 header attempts, 512 MiB per file, and bounded validation reads. A scan may stop early. Selected copies get SHA-256 comparison and destination read-back.\n\nEncryption, overwriting, TRIM, or physical damage may make recovery impossible. No tool can promise to recover everything.\n\nUninstalling Sift removes Sift trash. Install updates over the existing app. Recovered files are never executed by Sift."
+                        "NTFS undelete reads deleted master-file-table records from a local image. It retains original names and surviving folder paths and follows fragmented or sparse runs. Reused clusters are blocked. No bin is used for recovery.\n\nAndroid does not expose raw encrypted internal-storage sectors to ordinary apps. Sift cannot undelete internal phone storage, reverse TRIM, or decrypt missing encryption keys. The desktop Windows app can scan an unlocked NTFS drive with administrator consent.\n\nFAT/exFAT, APFS, ext, locked BitLocker, compressed/EFS data, and NTFS extension records are unsupported. Limits: 10,000 entries, 2 million MFT records, 64 GiB per file, 128 MiB bitmap. Original parent paths may be unknown.\n\nAdvanced signature search remains separate and supports six contiguous formats only, with unknown deletion status. Save recovered copies to another physical drive. No recovery result is guaranteed intact. Recovered files are never executed by Sift."
                     )
                 }
             },
@@ -669,7 +744,7 @@ private fun RecoveryFileCard(
                     Checkbox(
                         selected,
                         onCheckedChange = { onSelect() },
-                        enabled = enabled,
+                        enabled = enabled && file.recoverable,
                         modifier = Modifier.semantics { contentDescription = "Select ${file.name}" },
                     )
                 }
@@ -679,7 +754,14 @@ private fun RecoveryFileCard(
                 ) {
                     RecoveryThumbnail(file, model, session, true, enabled)
                     Text(file.name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    RecoveryNote("${sizeLabel(file.size)} · 0x${file.offset.toString(16)}")
+                    RecoveryNote(
+                        file.originalPath
+                            ?: "${sizeLabel(file.size)} · 0x${file.offset.toString(16)}"
+                    )
+                    if (!file.recoverable) RecoveryNote("Unavailable: ${file.evidence}")
+                    file.origin?.let { RecoveryNote(file.evidence) }
+                    if (file.width != null && file.height != null)
+                        RecoveryNote("${file.width} × ${file.height} pixels")
                 }
             }
         else
@@ -687,7 +769,7 @@ private fun RecoveryFileCard(
                 Checkbox(
                     selected,
                     onCheckedChange = { onSelect() },
-                    enabled = enabled,
+                    enabled = enabled && file.recoverable,
                     modifier = Modifier.semantics { contentDescription = "Select ${file.name}" },
                 )
                 Row(
@@ -700,8 +782,11 @@ private fun RecoveryFileCard(
                         verticalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
                         Text(file.name, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        file.origin?.let { RecoveryNote(file.evidence) }
+                        if (file.width != null && file.height != null)
+                            RecoveryNote("${file.width} × ${file.height} pixels")
                         RecoveryNote(
-                            "${file.category} · ${sizeLabel(file.size)}\nOffset 0x${file.offset.toString(16)}"
+                            "${file.category} · ${sizeLabel(file.size)}\n${file.originalPath ?: "Offset 0x${file.offset.toString(16)}"}"
                         )
                     }
                 }

@@ -58,8 +58,8 @@ internal object PhonePreviews {
     private fun validate(context: Context, entry: Entry): File {
         val file = File(entry.path)
         require(file.canonicalPath == file.absolutePath)
-        val root = Environment.getExternalStorageDirectory().canonicalFile.toPath()
-        val trash = File(context.getExternalFilesDir(null), "SiftTrash").canonicalFile.toPath()
+        val root = storageSources(context).map {it.root.toPath()}.firstOrNull {file.toPath().startsWith(it)} ?: error("Storage device is no longer mounted.")
+        val trash = context.getExternalFilesDirs(null).filterNotNull().map { File(it,"SiftTrash").canonicalFile.toPath() }.firstOrNull {file.toPath().startsWith(it)}
         require(file.toPath().startsWith(root))
         val first = root.relativize(file.toPath()).firstOrNull()?.toString()
         require(first != "Android" || file.parentFile?.toPath() == trash)

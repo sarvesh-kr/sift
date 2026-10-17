@@ -64,6 +64,7 @@ jobs:
       - run: npm ci
       - name: Test scanner on this operating system
         run: cargo test --manifest-path native-core/Cargo.toml --locked
+      - run: cargo test --manifest-path recovery-engine/Cargo.toml --locked
       - name: Build native installer
         uses: tauri-apps/tauri-action@v1
         env:

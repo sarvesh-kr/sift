@@ -155,6 +155,9 @@ async fn cleanup_files(
     allow_all_copies: bool,
     session: State<'_, Arc<Session>>,
 ) -> Result<CleanupResult, String> {
+    if recovery_only() {
+        return Err("Cleanup is disabled in the administrator recovery window. Open Sift normally to clean files.".into());
+    }
     let session = Arc::clone(session.inner());
     let guard = lock_work(&session)?;
     if session.needs_rescan.load(Ordering::Acquire) {
@@ -289,7 +292,7 @@ async fn scan_recovery_image(
         let Some(picked) = app
             .dialog()
             .file()
-            .set_title("Choose a local raw disk image (.img / .dd / .raw)")
+            .set_title("Choose an NTFS volume or disk image (.img / .dd / .raw)")
             .blocking_pick_file()
         else {
             return Ok(None);
@@ -378,32 +381,97 @@ async fn export_recovery_files(
     .await
     .map_err(|e| e.to_string())?
 }
+fn recovery_only() -> bool {
+    std::env::args_os().any(|a| a == "--sift-recovery-only")
+}
+
 #[tauri::command]
-async fn open_system_trash() -> Result<(), String> {
-    tauri::async_runtime::spawn_blocking(|| {
-        #[cfg(windows)]
-        let status = std::process::Command::new("explorer.exe")
-            .arg("shell:RecycleBinFolder")
-            .spawn();
-        #[cfg(target_os = "macos")]
-        let status = std::process::Command::new("open")
-            .arg(
-                std::env::var_os("HOME")
-                    .map(PathBuf::from)
-                    .ok_or("Home directory unavailable.")?
-                    .join(".Trash"),
-            )
-            .spawn();
-        #[cfg(target_os = "linux")]
-        let status = std::process::Command::new("gio")
-            .args(["open", "trash:///"])
-            .spawn();
-        status.map(|_| ()).map_err(|e| {
-            format!("Could not open system trash: {e}. Open it from your system file manager.")
+fn recovery_capabilities() -> serde_json::Value {
+    let drives = serde_json::to_value(sift_core::recovery::drives()).unwrap_or_default();
+    serde_json::json!({"driveAccess":true,"canElevate":cfg!(windows),"recoveryOnly":recovery_only(),"drives":drives})
+}
+#[tauri::command]
+async fn scan_recovery_drive(
+    app: tauri::AppHandle,
+    id: String,
+    deep: bool,
+    session: State<'_, Arc<Session>>,
+) -> Result<sift_core::recovery::RecoveryReport, String> {
+    {
+        let session = Arc::clone(session.inner());
+        let guard = lock_work(&session)?;
+        tauri::async_runtime::spawn_blocking(move || {
+            let _guard = guard;
+            let mut slot = session.recovery.lock().map_err(|e| e.to_string())?;
+            *slot = None;
+            let mut recovery = sift_core::recovery::RecoverySession::open_drive(&id)?;
+            let emit = |p| {
+                let _ = app.emit("recovery-progress", p);
+            };
+            let report = if deep {
+                recovery.scan_carved(&session.cancel, emit)?
+            } else {
+                recovery.scan(&session.cancel, emit)?
+            };
+            *slot = Some(recovery);
+            Ok(report)
         })
-    })
-    .await
-    .map_err(|e| e.to_string())?
+        .await
+        .map_err(|e| e.to_string())?
+    }
+}
+#[tauri::command]
+async fn enable_recovery_drive_access(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("Administrator drive access is a Windows feature.".into())
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        #[link(name = "shell32")]
+        unsafe extern "system" {
+            fn ShellExecuteW(
+                window: *mut std::ffi::c_void,
+                operation: *const u16,
+                file: *const u16,
+                parameters: *const u16,
+                directory: *const u16,
+                show: i32,
+            ) -> isize;
+        }
+        let exe: Vec<u16> = std::env::current_exe()
+            .map_err(|e| e.to_string())?
+            .as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        let operation: Vec<u16> = "runas".encode_utf16().chain(Some(0)).collect();
+        let args: Vec<u16> = "--sift-recovery-only"
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
+        // SAFETY: owned valid NUL-terminated strings; Windows displays its normal
+        // UAC consent prompt. The elevated process refuses cleanup at its backend.
+        let result = unsafe {
+            ShellExecuteW(
+                std::ptr::null_mut(),
+                operation.as_ptr(),
+                exe.as_ptr(),
+                args.as_ptr(),
+                std::ptr::null(),
+                1,
+            )
+        };
+        if result <= 32 {
+            return Err(
+                "Administrator access was declined or the recovery window could not open.".into(),
+            );
+        }
+        app.exit(0);
+        Ok(())
+    }
 }
 
 pub fn run() {
@@ -426,7 +494,9 @@ pub fn run() {
             recovery_preview,
             close_recovery_image,
             export_recovery_files,
-            open_system_trash
+            recovery_capabilities,
+            scan_recovery_drive,
+            enable_recovery_drive_access
         ])
         .run(tauri::generate_context!())
         .expect("Could not start Sift");
