@@ -24,6 +24,7 @@ python scripts/check-android-screen.py 'Scan shared storage' --tap
 python scripts/check-android-screen.py 'files indexed'
 adb exec-out screencap -p > android-release-results/scanned.png
 python scripts/check-android-screen.py 'Files' --tap
+python scripts/check-android-screen.py 'Search files' --input 'Sift-release-fixture.txt'
 python scripts/check-android-screen.py 'Sift-release-fixture.txt'
 adb exec-out screencap -p > android-release-results/files.png
 app_pid=$(adb shell pidof -s si.sarvesh.sift)
