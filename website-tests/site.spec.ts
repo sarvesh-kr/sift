@@ -83,7 +83,7 @@ test('Android phones get an APK recommendation and usable install instructions',
 
 test('workspaces explain recovery scope and Android permission limits without promising universal undelete',async({page})=>{
   await page.goto('/');const workspaces=page.getByRole('region',{name:/Make room\.\s*Bring something back\./});
-  await expect(workspaces).toContainText('Clean data or Recover data');await expect(workspaces).toContainText('512 MiB per candidate');
+  await expect(workspaces).toContainText('Clean data or Recover data');await expect(workspaces).toContainText('512 MiB per candidate');await expect(workspaces).toContainText('Select a drive');await expect(workspaces).toContainText('without root');
   await workspaces.getByRole('img',{name:/Sift’s start screen/}).scrollIntoViewIfNeeded();await expect.poll(()=>workspaces.getByRole('img',{name:/Sift’s start screen/}).evaluate((img:HTMLImageElement)=>img.complete&&img.naturalWidth>0)).toBe(true);
   await page.getByText('Can Sift recover permanently deleted files?',{exact:true}).click();await expect(page.locator('details[open]')).toContainText('No universal recovery');await expect(page.locator('details[open]')).toContainText('Android’s encrypted internal storage');
 });

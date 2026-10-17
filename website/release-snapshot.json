@@ -1,125 +1,125 @@
 [
   {
-    "tag_name": "v0.5.0",
+    "tag_name": "v0.6.1",
     "draft": false,
     "prerelease": true,
-    "published_at": "2026-10-17T12:49:17Z",
+    "published_at": "2026-10-17T17:49:37Z",
     "assets": [
       {
         "name": "SHA256SUMS-linux-x64.txt",
         "size": 290,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/SHA256SUMS-linux-x64.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/SHA256SUMS-linux-x64.txt"
       },
       {
         "name": "SHA256SUMS-macos-apple-silicon.txt",
         "size": 214,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/SHA256SUMS-macos-apple-silicon.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/SHA256SUMS-macos-apple-silicon.txt"
       },
       {
         "name": "SHA256SUMS-macos-intel.txt",
         "size": 198,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/SHA256SUMS-macos-intel.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/SHA256SUMS-macos-intel.txt"
       },
       {
         "name": "SHA256SUMS-windows-x64.txt",
         "size": 309,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/SHA256SUMS-windows-x64.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/SHA256SUMS-windows-x64.txt"
       },
       {
         "name": "SHA256SUMS.txt",
         "size": 1008,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/SHA256SUMS.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/SHA256SUMS.txt"
       },
       {
-        "name": "Sift-0.5.0-linux-x64-build-info.json",
+        "name": "Sift-0.6.1-linux-x64-build-info.json",
         "size": 501,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-linux-x64-build-info.json"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-linux-x64-build-info.json"
       },
       {
-        "name": "Sift-0.5.0-linux-x64.AppImage",
-        "size": 81250808,
+        "name": "Sift-0.6.1-linux-x64.AppImage",
+        "size": 81304056,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-linux-x64.AppImage"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-linux-x64.AppImage"
       },
       {
-        "name": "Sift-0.5.0-linux-x64.deb",
-        "size": 2636670,
+        "name": "Sift-0.6.1-linux-x64.deb",
+        "size": 2710346,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-linux-x64.deb"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-linux-x64.deb"
       },
       {
-        "name": "Sift-0.5.0-macos-apple-silicon-build-info.json",
+        "name": "Sift-0.6.1-macos-apple-silicon-build-info.json",
         "size": 491,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-macos-apple-silicon-build-info.json"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-macos-apple-silicon-build-info.json"
       },
       {
-        "name": "Sift-0.5.0-macos-apple-silicon.dmg",
-        "size": 2418247,
+        "name": "Sift-0.6.1-macos-apple-silicon.dmg",
+        "size": 2509217,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-macos-apple-silicon.dmg"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-macos-apple-silicon.dmg"
       },
       {
-        "name": "Sift-0.5.0-macos-intel-build-info.json",
+        "name": "Sift-0.6.1-macos-intel-build-info.json",
         "size": 484,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-macos-intel-build-info.json"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-macos-intel-build-info.json"
       },
       {
-        "name": "Sift-0.5.0-macos-intel.dmg",
-        "size": 2588517,
+        "name": "Sift-0.6.1-macos-intel.dmg",
+        "size": 2680718,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-macos-intel.dmg"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-macos-intel.dmg"
       },
       {
-        "name": "Sift-0.5.0-windows-x64-build-info.json",
+        "name": "Sift-0.6.1-windows-x64-build-info.json",
         "size": 503,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-windows-x64-build-info.json"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-windows-x64-build-info.json"
       },
       {
-        "name": "Sift-0.5.0-windows-x64-portable.zip",
-        "size": 2385890,
+        "name": "Sift-0.6.1-windows-x64-portable.zip",
+        "size": 2452766,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-windows-x64-portable.zip"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-windows-x64-portable.zip"
       },
       {
-        "name": "Sift-0.5.0-windows-x64-setup.exe",
-        "size": 1938084,
+        "name": "Sift-0.6.1-windows-x64-setup.exe",
+        "size": 1984824,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.5.0/Sift-0.5.0-windows-x64-setup.exe"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/v0.6.1/Sift-0.6.1-windows-x64-setup.exe"
       }
     ]
   },
   {
-    "tag_name": "android-v0.3.0",
+    "tag_name": "android-v0.4.0",
     "draft": false,
     "prerelease": true,
-    "published_at": "2026-10-17T12:59:46Z",
+    "published_at": "2026-10-17T17:42:37Z",
     "assets": [
       {
         "name": "SHA256SUMS-android.txt",
         "size": 190,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.3.0/SHA256SUMS-android.txt"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.4.0/SHA256SUMS-android.txt"
       },
       {
-        "name": "Sift-0.3.0-android-build-info.json",
-        "size": 854,
+        "name": "Sift-0.4.0-android-build-info.json",
+        "size": 452,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.3.0/Sift-0.3.0-android-build-info.json"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.4.0/Sift-0.4.0-android-build-info.json"
       },
       {
-        "name": "Sift-0.3.0-android.apk",
-        "size": 2227276,
+        "name": "Sift-0.4.0-android.apk",
+        "size": 3997378,
         "state": "uploaded",
-        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.3.0/Sift-0.3.0-android.apk"
+        "browser_download_url": "https://github.com/sarvesh-kr/sift/releases/download/android-v0.4.0/Sift-0.4.0-android.apk"
       }
     ]
   }

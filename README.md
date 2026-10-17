@@ -1,6 +1,6 @@
 # Sift
 
-**Your space, simplified.** Local storage cleanup and a disk-image recovery preview for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
+**Your space, simplified.** Local storage cleaning and on-device recovery for desktop and Android. Desktop uses Rust, Tauri 2, React, and TypeScript; Android uses native Kotlin and Jetpack Compose.
 
 [![Quality checks](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/ci.yml)
 [![Android builds](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml/badge.svg)](https://github.com/sarvesh-kr/sift/actions/workflows/android.yml)
@@ -14,7 +14,7 @@
 | Linux x64 | `linux-x64.deb` or `linux-x64.AppImage` |
 | Apple Silicon Mac (M1 or newer) | `macos-apple-silicon.dmg` |
 | Intel Mac | `macos-intel.dmg` |
-| Android 11+ phone | Signed `Sift-0.3.0-android.apk` |
+| Android 11+ phone | Signed `Sift-0.4.0-android.apk` |
 
 Installers and archives are attached to tagged preview releases after every platform build passes. Choose **Clean data** or **Recover data** at launch. The cleaning workspace starts with labeled sample data; click **Scan a folder** to index your own files.
 
@@ -37,25 +37,39 @@ are a visual aid; inspect paths and retain backups before deletion.
 
 ## Clean data and Recover data
 
-Desktop **0.5.0** and Android **0.3.0** open with two workspace choices. Existing
-cleaning tools remain under **Clean data**. **Recover data** offers trash restore
-and read-only carving of a user-picked local disk image, with categorized
-JPEG/PNG/WebP/PDF/ZIP/WAV candidates, List / Grid views, image previews, evidence,
-search, individual/all-match selection, and verified exports grouped by category.
-SHA-256, destination read-back, exclusive outputs, and a JSON manifest preserve
-the distinction between finding a byte range and recovering a readable file.
+Desktop **0.6.1** and Android **0.4.0** combine both workspaces in one app.
+Choose the storage first: a local folder/drive for cleaning, an OS-enumerated drive
+or connected device for desktop recovery, or mounted internal/card/USB shared
+storage on Android. Recovery does not use a bin.
 
-This is a **contiguous-carving preview**, not professional recovery parity:
-original names, folders, deletion status, fragmented files, filesystem metadata
-undelete, other formats, and files above 512 MiB are unsupported. PDF evidence is
-header/footer only; ZIP payload CRCs are unverified. Android cannot undelete raw
-encrypted internal storage through normal permissions. TRIM, overwriting, and
-encryption can make recovery impossible. Image scanning uses the document picker
-without All files access; shared-storage cleanup and Sift-trash restore still
-need their existing permission. Desktop trash restore uses the OS file manager.
+- **Desktop NTFS undelete:** read deleted master-file-table records, retain
+  surviving original names and folder paths, and recover resident, fragmented or
+  sparse contents. Reused clusters are blocked. Windows offers UAC consent in a
+  recovery-only window whose backend disables cleanup. Linux/macOS require OS
+  disk-read permissions for direct devices.
+- **Desktop deep scan:** a separate filesystem-independent signature scan for six
+  contiguous formats (JPEG/PNG/WebP/PDF/ZIP/WAV). Original paths and deletion status
+  are unknown, and existing files can appear.
+- **Non-root Android:** search the selected device's accessible cache, hidden and
+  `.nomedia` folders for surviving/embedded contents. Preview images, inspect
+  dimensions and source evidence, and recover verified copies. Some results are
+  thumbnails or copies of files that still exist; original deletion is unproven.
+- **Rooted Android, experimental:** explicitly grant root to a read-only helper
+  for a deep scan of the selected mounted internal or supported removable block
+  device. The helper cannot write, delete or choose a destination. Encryption,
+  TRIM and overwrites can still prevent recovery. Save to another storage device.
 
-See [the recovery capabilities, safety model, and exact limits](docs/RECOVERY.md).
-No universal-recovery or superiority claim is made.
+Results include categories, search, saved List/Grid views, previews, per-file or
+bulk selection, progress, cancellation and safe new-copy exports with hashes,
+destination read-back and a JSON manifest. Original paths are evidence and are
+never interpreted as output instructions. Advanced image tools remain optional;
+no disk image is needed for the normal on-device recovery flows.
+
+See [capabilities, permissions, test evidence and exact limits](docs/RECOVERY.md).
+Compressed/EFS data, NTFS extension records and filesystem metadata undelete for
+FAT/exFAT/APFS/ext/F2FS are not supported. Deep scans cover the six formats above
+and contiguous candidates up to 512 MiB. NTFS candidates are limited to 64 GiB.
+No universal-recovery or professional-tool superiority claim is made.
 
 ## What works on desktop
 
@@ -79,7 +93,7 @@ Under **Clean data**, the desktop app initially shows a clearly labeled sample w
 
 Rust handles directory traversal, metadata, hashing, and trash operations without a Python or Node runtime. Tauri uses the operating system's webview instead of shipping a separate Chromium engine. The interface is a small static React/TypeScript bundle, with Lucide icons and locally bundled fonts. No server, accounts, analytics, network API, or cloud AI is involved.
 
-The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-specific package for each platform. The separate native Android client respects Android shared-storage restrictions; it does not run the desktop filesystem engine on a phone.
+The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-specific package for each platform. Android uses native Kotlin/Compose, the shared Rust NTFS engine for advanced image tools, and a narrow Rust read-only helper for optional rooted access. Its non-root search respects Android shared-storage restrictions.
 
 ## Android phones
 
@@ -88,8 +102,7 @@ The shared desktop code targets **Windows, macOS, and Linux**. Build an OS-speci
 Download the signed APK from [the website](https://sift.sarvesh.si/#download) or
 [Android releases](https://github.com/sarvesh-kr/sift/releases?q=android).
 Android 11 or newer is required. Allow APK installation from your browser or file
-manager when Android asks. Open Sift, choose **Clean data**, and explicitly enable its **All files access**
-in system settings, return to the app, and scan shared phone storage.
+manager when Android asks. Open Sift, choose **Clean data** or **Recover data**, select internal or mounted removable storage, and explicitly enable **All files access** for shared-storage scans. Return to the app and start the selected scan. Rooted deep scanning is a separate explicit action for already-rooted devices.
 
 The native client includes category browsing, large-file filtering, search,
 exact duplicate comparison, individual and all-match selection, restorable
@@ -115,7 +128,7 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:1420`. Choose **Clean data** to use the sample workspace and cleanup review. **Recover data** shows its capabilities; native image recovery is not simulated in the browser. **Scan a folder** explains that native access requires the desktop build.
+Open `http://localhost:1420`. Choose **Clean data** to use the sample workspace and cleanup review. **Recover data** shows its capabilities; native device recovery is not simulated in the browser. **Scan a folder** explains that native access requires the desktop build.
 
 ## Run the desktop application
 
@@ -168,7 +181,7 @@ Rust tests exercise nested scanning, categorization, content-based duplicate det
 
 ## Storage-cleanup product goals
 
-[PRODUCT-GOALS.md](PRODUCT-GOALS.md) records the official comparison sources, delivered behavior, remaining engineering milestones, and release gates for meaningful superiority claims. This release does not implement an NTFS MFT engine, a disk-backed inventory, application-specific browser/OS cache cleaners, certified media sanitization, in-app restore, or similar-image detection.
+[PRODUCT-GOALS.md](PRODUCT-GOALS.md) records the official comparison sources, delivered behavior, remaining engineering milestones, and release gates for meaningful superiority claims. This release does not implement a disk-backed inventory, application-specific browser/OS cache cleaners, certified media sanitization, in-app restore, or similar-image detection.
 
 ## Scope and practical limits
 

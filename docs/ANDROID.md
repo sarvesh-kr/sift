@@ -7,15 +7,30 @@ that desktop filesystem APIs work around Android's storage restrictions.
 
 ## Workspaces and recovery
 
-Android 0.3.0 (version code 3) opens with **Clean data** and **Recover data**.
-Cleaning and Sift-trash restore retain their previous permission and safety
-checks. Recovery can also scan a local, seekable raw image selected through the
-system document picker, without All files access. It carves contiguous JPEG,
-PNG, WebP, PDF, ZIP, and WAV candidates, shows evidence and local image previews,
-and exports selected category-organized copies with SHA-256/read-back checks and
-a JSON manifest. This cannot undelete encrypted internal-storage sectors or
-rebuild fragmented files, original names, or folder trees. [Full recovery scope
-and platform limits](RECOVERY.md).
+Android 0.4.0 (version code 4) opens with **Clean data** and **Recover data**.
+Both workspaces let you choose mounted internal shared storage or a memory
+card/USB volume exposed by Android. Cleaning preserves a separate trash/index
+for each volume.
+
+**Non-root recovery** searches the selected storage's accessible hidden/cache
+and `.nomedia` folders for surviving or embedded JPEG, PNG, WebP, PDF, ZIP and
+WAV contents. Results include previews, bounded image dimensions, source
+locations and evidence. Some are thumbnails or copies of existing files;
+deletion status is unknown. All files access does not expose deleted sectors or
+other apps' private storage.
+
+**Rooted deep scan (experimental)** separately requests root consent and uses an
+installed, read-only native helper to read the selected mounted userdata or
+supported removable block device. It does not root or unlock the phone. Root
+cannot undo encryption, TRIM or overwrites. Root-manager and physical-device
+compatibility remains experimental. Exports require a different identifiable
+local storage volume; the source is refused before creating output.
+
+Optional advanced tools scan a local, seekable NTFS image using the shared Rust
+undelete engine, or separately carve six contiguous signature formats. No image
+is needed for phone/card scanning. All modes support categorized results,
+list/grid views, selected verified copies, read-back checks and a JSON manifest.
+[Full recovery scope and platform limits](RECOVERY.md).
 
 Image handles live in a separate lifecycle ViewModel. Selection is allowlisted;
 output descriptors open without truncation and must be fresh empty regular
@@ -28,15 +43,16 @@ rejects accidental fixture assets.
 ## Storage and cleanup
 
 Android 11+ is required. Target SDK: 36 (Android 16). The Clean data workspace explicitly asks
-the user to enable **All files access** for Sift before scanning shared primary
-storage. No root, accessibility service, package visibility, internet, contacts,
-or background scan permission is requested. Android/data, Android/obb, other
+the user to enable **All files access** for Sift before scanning the selected shared
+storage. Cleaning and non-root recovery do not require root. The optional rooted
+scan requests separate consent. No accessibility service, package visibility,
+internet, contacts, or background scan permission is requested. Android/data, Android/obb, other
 apps' private files, and the system partition are excluded. Only indexed regular
 files may be cleaned; symlinks and changed identities, sizes, or timestamps are
 refused. Scans cap the inventory at 100,000 files. Duplicate checks are optional,
 stream SHA-256, exclude hard links, and confirm matches with another byte pass.
 
-Sift trash is app-owned storage on the same primary volume. An atomic intent
+Sift trash is app-owned storage on the selected volume. An atomic intent
 record is saved before each rename, so interrupted moves can be recovered.
 Failed moves never fall back to deletion. Android media FUSE can change file
 identity/timestamps and invalidate old handles after renaming into app data.
@@ -85,7 +101,10 @@ uninstall to update** if you need to preserve Sift trash.
 
 ## Build and validate
 
-Install JDK 17, Android SDK platform 36 and build-tools 35.0.0. The Gradle 8.13
+On a Linux build host, install JDK 17, Android SDK platform 36, build-tools
+35.0.0, NDK 28.2.13676358, Rust and the four Android Rust targets.
+`scripts/build-android-recovery.py` builds the JNI engine and read-only helper
+for ARM64, ARMv7, x86 and x86_64 before Gradle packages the APK. The Gradle 8.13
 wrapper verifies the distribution's pinned SHA-256 checksum.
 
 ```sh

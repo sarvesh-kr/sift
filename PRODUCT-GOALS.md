@@ -48,19 +48,23 @@ Run the same datasets on the same real Windows machine and record the exact app 
 
 Only claim an advantage for the metric and scenario actually measured. “Best in class” is a product goal until the necessary public comparisons and reliability tests support it.
 
-## Recovery goals after the initial carving preview
+## Recovery qualification after on-device recovery
 
-Desktop 0.5.0 / Android 0.3.0 provide bounded read-only image carving and trash
-access, documented in `docs/RECOVERY.md`. They are not professional recovery
-parity. Further work needs filesystem-aware deleted metadata parsing (starting
-with a separately tested FAT/exFAT image reader, then NTFS), original-path
-provenance, fragmented-file recovery where evidence permits, more formats and
-larger candidates, robust acquisition integration, and real-device qualification.
+Desktop 0.6.1 / Android 0.4.0 add selected-storage recovery, a shared NTFS
+metadata undelete engine, independent deep scanning, Android non-root surviving
+cache recovery and an experimental rooted read-only helper. Exact delivered
+capabilities and exclusions are in `docs/RECOVERY.md`.
 
-Before claiming competitive recovery quality, benchmark against established
-recovery tools on reproducible labeled NTFS/FAT/exFAT images, with intact,
-deleted, fragmented, overwritten, encrypted, and TRIM-affected fixtures. Measure
-precision/false positives, byte-exact recall, readable-file rate, path/name
-fidelity, scan throughput, peak memory, cancellation latency, source writes, and
-export verification. Publish hardware, settings, corpus ground truth, and failure
-cases. A generated filename or matching signature is not proof of undelete.
+Remaining work includes broader filesystem metadata support, compressed/encrypted
+NTFS cases, extension records, safe partial-file recovery, more formats and larger
+carved candidates, stronger acquisition integration and wider real-device/root
+manager qualification. A signature, cached thumbnail or generated name does not
+prove that an original deleted file was restored.
+
+Before claiming competitive recovery quality, benchmark against established tools
+on reproducible labeled NTFS/FAT/exFAT/APFS/ext/F2FS corpora with intact, deleted,
+fragmented, overwritten, encrypted and TRIM-affected files. Measure false
+positives, byte-exact recall, readable-file rate, path/name fidelity, scan speed,
+peak memory, cancellation latency, source writes and export integrity. Publish
+hardware, access level, ground truth and failures. No superiority or universal
+recovery claim follows from passing the current functional fixtures.

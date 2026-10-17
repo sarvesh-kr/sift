@@ -13,7 +13,7 @@ source commit. See GitHub Actions for the recorded outcome on each runner.
   contents, handle a locked file followed by a recyclable file, and refuse a
   callback requesting deletion without recycling. Fixture filtering uses the
   unique test directory; no unrelated Recycle Bin items are modified.
-- **26 frontend checks:** storage analysis and review flows, keyboard focus,
+- **27 frontend checks:** storage analysis and review flows, keyboard focus,
   responsive layout, and mocked native partial/zero-success cleanup. These verify
   that per-file errors persist, successful files are excluded from a retry, typed confirmations reset with selection changes, single-file and filtered all-match selection work, and incomplete overwrites block cleanup until rescanning.
 - **Six website checks:** release links, Mac architecture selection, previews,
@@ -127,8 +127,8 @@ checks scroll the container to uncomposed results before interacting with them.
 - The [optimized APK smoke](https://github.com/sarvesh-kr/sift/actions/runs/39034259498)
   passed both workspace screens while access was denied, then scan, details,
   cleanup review, trash, full OS reboot, restore, and exact restored bytes.
-  Screenshots in `artifacts/sift-android.png` and
-  `artifacts/sift-android-recovery.png` come from this optimized build's emulator.
+  That release was qualified on an emulator; the checked-in Android screenshots
+  now track the latest optimized release below.
 - [Signed attachment verification](https://github.com/sarvesh-kr/sift/actions/runs/39034643135)
   confirmed that every signed APK ZIP entry matches the tested CI build. The
   published APK uses the existing Sift certificate, version code 3, no internet
@@ -142,3 +142,47 @@ checks scroll the container to uncomposed results before interacting with them.
 
 These are automated fixture/emulator checks, not physical-device recovery rates,
 full desktop interaction qualification, or a commercial recovery benchmark.
+
+## Selected-storage recovery (desktop 0.6.1 / Android 0.4.0)
+
+- Desktop source `f423146bffeceb79c5638c713144de12fa7e78b0`:
+  [four platform builds and validation](https://github.com/sarvesh-kr/sift/actions/runs/39053861946) passed.
+  The native suite has 34 tests on Linux/macOS and 36 on Windows; the shared
+  recovery engine adds six checks. The 27 interface tests include direct drive
+  selection, separate NTFS/deep modes, collapsed advanced image tools,
+  selection/error handling, and scrolling to completed results. All six desktop
+  package and four build-record hashes match the release manifest and uploaded
+  asset digests; the tag and four records identify the exact source above.
+- A real disposable Windows NTFS VHD fixture permanently deletes resident and
+  nonresident files through Windows, then recovers their exact bytes directly
+  from the drive. It also refuses a source-volume output directory. Shared NTFS
+  fixtures additionally cover fragmented runs, original names/paths, reused
+  clusters, changed records, partition offsets, cleared initialized length,
+  cancellation and source preservation. Synthetic fixtures are not user data.
+- Android source `a1cc6d1171ab764d42902e4847c6353b255a4b6f`:
+  [release build, lint, 11 JVM checks and API 30/36 device checks](https://github.com/sarvesh-kr/sift/actions/runs/39053503268).
+  Each API passes 24 main instrumented tests plus one separate denied-access
+  test. Tests cover shared JNI NTFS undelete, non-root selected-storage hidden/
+  embedded media discovery, previews, verified copies, changed-source refusal,
+  existing cleanup regressions, and 128 descriptor open/read/close cycles.
+  The installed read-only root helper's geometry handshake also passes on both
+  emulators. This does not qualify physical root managers or encrypted storage.
+- API 30's first attempt hit a Compose test-harness reentrant measure/layout
+  exception. Its failed job passed on retry without a source change; this
+  intermittent test limitation is recorded rather than claimed as an app fix.
+- [Optimized release APK smoke](https://github.com/sarvesh-kr/sift/actions/runs/39054639643)
+  passed both native workspaces, then cleanup, full emulator reboot and exact
+  fixture restore. The Android workspace/recovery screenshots in `artifacts/`
+  are from that optimized APK on its emulator. [Signed attachment verification](https://github.com/sarvesh-kr/sift/actions/runs/39054728553)
+  passed: every original APK ZIP entry matches the tested CI artifact; only
+  signature entries are added. The original certificate and alignment are verified.
+  The APK has version code 4, all four ARM/Intel ABIs, no internet permission,
+  and 16 KiB native/ZIP alignment. Fixtures and the debug provider are excluded.
+  All three published Android asset digests match the verified APK, build record
+  and checksum manifest.
+
+Rooted Android, unusual devices/filesystems and physical recovery rates still
+need real-device qualification. Non-root phone results are surviving copies,
+possibly thumbnails, with unknown deletion status. Encryption, TRIM and writes
+can prevent recovery even when a device is readable. No universal recovery,
+zero-bug or commercial-superiority claim follows from these checks.
