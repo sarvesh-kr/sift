@@ -481,6 +481,15 @@ async fn enable_recovery_drive_access(app: tauri::AppHandle) -> Result<(), Strin
 }
 
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    #[cfg(windows)]
+    if recovery_only() {
+        // A newly elevated window must not attach to the cleaner's still-exiting
+        // WebView2 browser/profile. Keep this privileged session's cache separate.
+        for window in &mut context.config_mut().app.windows {
+            window.data_directory = Some(PathBuf::from("Sift/recovery-only"));
+        }
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -505,6 +514,6 @@ pub fn run() {
             scan_recovery_drive,
             enable_recovery_drive_access
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("Could not start Sift");
 }
