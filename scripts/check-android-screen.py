@@ -24,4 +24,11 @@ for _ in range(15):
     print('Confirmed Android UI: '+args.text)
     break
 else:
+    from pathlib import Path
+    out=Path('android-release-results');out.mkdir(exist_ok=True)
+    (out/'failed-window.xml').write_text(result.stdout)
+    with (out/'failed-screen.png').open('wb') as screenshot:
+        subprocess.run(['adb','exec-out','screencap','-p'],stdout=screenshot)
+    print(result.stdout)
+    subprocess.run(['adb','shell','ls','-la','/sdcard/Android/data/si.sarvesh.sift/files/SiftTrash'])
     raise SystemExit('Android UI node did not appear: '+args.text)
